@@ -20,12 +20,17 @@ from backend.tools import (
     WebScrapeTool,
 )
 from backend.tools.github.tool import GithubTool
+from backend.tools.meeting_setup.tool import MeetingSetupTool
+
+Meeting_Setup = MeetingSetupTool
 
 logger = LoggerFactory().get_logger()
 
 """
 Tool Name enum, mapping to the tool's main implementation class.
 """
+
+
 class Tool(Enum):
     Wiki_Retriever_LangChain = LangChainWikiRetriever
     Read_File = ReadFileTool
@@ -42,21 +47,21 @@ class Tool(Enum):
     Gmail = GmailTool
     Github = GithubTool
     Sharepoint = SharepointTool
+    Meeting_Setup = MeetingSetupTool
 
 
 def get_available_tools() -> dict[str, ToolDefinition]:
     # Get list of implementations from Tool Enum
     tool_classes = [tool.value for tool in Tool]
     # Generate dictionary of ToolDefinitions keyed by Tool ID
-    tools = {
-        tool.ID: tool.get_tool_definition() for tool in tool_classes
-    }
+    tools = {tool.ID: tool.get_tool_definition() for tool in tool_classes}
 
     # Handle adding Community-implemented tools
-    use_community_tools = Settings().get('feature_flags.use_community_features')
+    use_community_tools = Settings().get("feature_flags.use_community_features")
     if use_community_tools:
         try:
             from community.config.tools import get_community_tools
+
             community_tools = get_community_tools()
             tools.update(community_tools)
         except ImportError:

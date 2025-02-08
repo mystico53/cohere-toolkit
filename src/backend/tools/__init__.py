@@ -6,7 +6,11 @@ from backend.tools.gmail import GmailAuth, GmailTool
 from backend.tools.google_drive import GoogleDrive, GoogleDriveAuth
 from backend.tools.google_search import GoogleWebSearch
 from backend.tools.hybrid_search import HybridWebSearch
-from backend.tools.lang_chain import LangChainVectorDBRetriever, LangChainWikiRetriever
+from backend.tools.lang_chain import (
+    LangChainVectorDBRetriever,
+    LangChainWikiRetriever,
+)
+from backend.tools.meeting_setup.tool import MeetingSetupTool
 from backend.tools.python_interpreter import PythonInterpreter
 from backend.tools.sharepoint import SharepointAuth, SharepointTool
 from backend.tools.slack import SlackAuth, SlackTool
@@ -35,4 +39,5 @@ __all__ = [
     "SharepointAuth",
     "GithubTool",
     "GithubAuth",
+    "MeetingSetupTool",
 ]

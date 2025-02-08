@@ -120,6 +120,7 @@ build-backend = "poetry.core.masonry.api"
 include = [
   "src/backend/services/metrics.py", 
   "src/backend/tools/google_drive/sync/actions/",
+  "src/backend/tools/meeting_setup/"
 ]
 defineConstant = { DEBUG = true }
 reportMissingImports = true
@@ -132,4 +133,7 @@ lint.ignore = ["E501", "N806"]
 [tool.pytest.ini_options]
 pythonpath = [
   "."
+]
+packages = [
+    { include = "src" }
 ]

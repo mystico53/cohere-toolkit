@@ -1,8 +1,9 @@
 {
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.codeActionsOnSave": {
-        "notebook.source.fixAll": "explicit",
-        // uncomment this if you don't want the editor to automatically organize imports
-        // "source.organizeImports": "never"
-    }
+        "notebook.source.fixAll": "explicit"
+
+    },
+    "python.analysis.extraPaths": ["."],
+    "python.analysis.autoImportCompletions": true
 }
