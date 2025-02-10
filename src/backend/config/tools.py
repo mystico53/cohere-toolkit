@@ -20,9 +20,6 @@ from backend.tools import (
     WebScrapeTool,
 )
 from backend.tools.github.tool import GithubTool
-from backend.tools.meeting_setup.tool import MeetingSetupTool
-
-Meeting_Setup = MeetingSetupTool
 
 logger = LoggerFactory().get_logger()
 
@@ -47,7 +44,6 @@ class Tool(Enum):
     Gmail = GmailTool
     Github = GithubTool
     Sharepoint = SharepointTool
-    Meeting_Setup = MeetingSetupTool
 
 
 def get_available_tools() -> dict[str, ToolDefinition]:

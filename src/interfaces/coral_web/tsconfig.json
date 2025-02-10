@@ -24,6 +24,7 @@
     "module": "esnext",
     "resolveJsonModule": true,
     "inlineSources": false,
+    "noImplicitAny": false,
     "isolatedModules": true,
     "composite": false,
     "declaration": false,

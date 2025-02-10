@@ -8,11 +8,12 @@ DEFAULT_AGENT_ID = "default"
 DEFAULT_DEPLOYMENT = CohereDeployment.name()
 DEFAULT_MODEL = "command-r-plus"
 
+
 def get_default_agent() -> AgentPublic:
     return AgentPublic(
         id=DEFAULT_AGENT_ID,
-        name='Command R+',
-        description='Ask questions and get answers based on your tools and files.',
+        name="Command R+",
+        description="Ask questions and get answers based on your tools and files.",
         created_at=datetime.datetime.now(),
         updated_at=datetime.datetime.now(),
         preamble="",
@@ -23,11 +24,13 @@ def get_default_agent() -> AgentPublic:
             Tool.Search_File.value.ID,
             Tool.Python_Interpreter.value.ID,
             Tool.Hybrid_Web_Search.value.ID,
+            Tool.Calculator.value.ID,  # Adding Calculator
+            Tool.Wiki_Retriever_LangChain.value.ID,
         ],
         tools_metadata=[],
         deployment=DEFAULT_DEPLOYMENT,
         model=DEFAULT_MODEL,
-        user_id='',
+        user_id="",
         organization_id=None,
         is_private=False,
     )

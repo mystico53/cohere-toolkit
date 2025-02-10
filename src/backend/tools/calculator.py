@@ -31,12 +31,12 @@ class Calculator(BaseTool):
                     "required": True,
                 }
             },
-            is_visible=False,
+            is_visible=True,
             is_available=Calculator.is_available(),
             category=ToolCategory.Function,
             error_message=cls.generate_error_message(),
             description="A powerful multi-purpose calculator capable of a wide array of math calculations.",
-        ) # type: ignore
+        )  # type: ignore
 
     async def call(
         self, parameters: dict, ctx: Context, **kwargs: Any
@@ -59,5 +59,4 @@ class Calculator(BaseTool):
             logger.error(event=f"[Calculator] Error parsing expression: {e}")
             return self.get_tool_error(details=str(e))
 
-
-        return result # type: ignore
+        return result  # type: ignore
