@@ -3,6 +3,7 @@ import datetime
 from backend.config.tools import Tool
 from backend.model_deployments.cohere_platform import CohereDeployment
 from backend.schemas.agent import AgentPublic
+from community.config.tools import CommunityTool
 
 DEFAULT_AGENT_ID = "default"
 DEFAULT_DEPLOYMENT = CohereDeployment.name()
@@ -24,8 +25,9 @@ def get_default_agent() -> AgentPublic:
             Tool.Search_File.value.ID,
             Tool.Python_Interpreter.value.ID,
             Tool.Hybrid_Web_Search.value.ID,
-            Tool.Calculator.value.ID,  # Adding Calculator
+            Tool.Calculator.value.ID,
             Tool.Wiki_Retriever_LangChain.value.ID,
+            CommunityTool.Meeting.value.ID,  # This will resolve to "toolkit_meeting"
         ],
         tools_metadata=[],
         deployment=DEFAULT_DEPLOYMENT,
