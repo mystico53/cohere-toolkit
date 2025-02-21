@@ -211,7 +211,7 @@ async def chat_ab_test(
     chat_request: CohereChatRequest,
     session: DBSessionDep,
     ctx: Context = Depends(get_context),
-) -> Dict[str, NonStreamedChatResponse | str | bool]:
+) -> Dict[str, Any]:
     """
     Test endpoint that makes two identical chat requests using c4ai-aya-expanse-32b model
     and returns both responses.
@@ -232,12 +232,32 @@ async def chat_ab_test(
         response_a = None
         response_b = None
 
+        # Create a fresh request for the second call using the original data
+        # instead of trying to deep copy the complex object
+        request_data_b = {
+            "message": chat_request.message,
+            "chat_history": [],  # Start with empty history for the second call
+            "model": chat_request.model,
+            "agent_id": chat_request.agent_id
+            if hasattr(chat_request, "agent_id")
+            else None,
+            # Add other fields as needed
+        }
+        chat_request_b = CohereChatRequest(**request_data_b)
+
+        # Get a fresh context for the second call
+        ctx_b = Context()
+        if chat_request.model:
+            ctx_b.with_model(chat_request.model)
+        if hasattr(chat_request, "agent_id") and chat_request.agent_id:
+            ctx_b.with_agent_id(chat_request.agent_id)
+
         # Make first call
         async for response in deployment_a.invoke_chat(chat_request, ctx=ctx):
             response_a = response
 
-        # Make second call
-        async for response in deployment_b.invoke_chat(chat_request, ctx=ctx):
+        # Make second call with the fresh request and context
+        async for response in deployment_b.invoke_chat(chat_request_b, ctx=ctx_b):
             response_b = response
 
         return {
