@@ -8,6 +8,7 @@ from backend.schemas.chat import BaseChatRequest
 
 class CohereChatPromptTruncation(StrEnum):
     """Dictates how the prompt will be constructed. Defaults to "AUTO_PRESERVE_ORDER"."""
+
     OFF = "OFF"
     AUTO_PRESERVE_ORDER = "AUTO_PRESERVE_ORDER"
 
@@ -17,6 +18,7 @@ class CohereChatRequest(BaseChatRequest):
     Request shape for Cohere Python SDK Streamed Chat.
     See: https://github.com/cohere-ai/cohere-python/blob/main/src/cohere/base_client.py#L1629
     """
+
     documents: list[dict[str, Any]] = Field(
         default_factory=list,
         title="Documents",

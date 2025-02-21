@@ -4,6 +4,8 @@ from backend.schemas.context import Context
 from backend.schemas.tool import ToolCategory, ToolDefinition
 from backend.tools.base import BaseTool
 
+from ..utils.database import get_db_connection, init_database
+
 
 class MeetingTool(BaseTool):
     """
@@ -14,10 +16,25 @@ class MeetingTool(BaseTool):
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
+        self.db_path = init_database()
 
     @classmethod
     def is_available(cls) -> bool:
         return True
+
+    def _get_person_info(self, name: str) -> str:
+        """Look up a person's info in the database."""
+        conn = get_db_connection(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT info FROM people WHERE name = ? COLLATE NOCASE", (name,))
+        result = cursor.fetchone()
+
+        conn.close()
+
+        if result:
+            return result[0]
+        return f"No information found for {name}"
 
     @classmethod
     def get_tool_definition(cls, **kwargs: Any) -> ToolDefinition:
@@ -30,7 +47,12 @@ class MeetingTool(BaseTool):
                     "description": "The trigger phrase 'new meeting' that activates this tool",
                     "type": "str",
                     "required": True,
-                }
+                },
+                "name": {
+                    "description": "Name of the person to look up",
+                    "type": "str",
+                    "required": False,
+                },
             },
             is_visible=True,
             is_available=cls.is_available(),
@@ -61,4 +83,11 @@ class MeetingTool(BaseTool):
         Returns:
             List of dictionaries containing at least a 'text' field
         """
-        return [{"text": "Who do you want to meet?"}]
+        name = parameters.get("name")
+
+        if not name:
+            return [{"text": "Who do you want to meet?"}]
+
+        # Look up the person's info
+        info = self._get_person_info(name)
+        return [{"text": info}]
