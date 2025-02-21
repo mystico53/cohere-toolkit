@@ -40,7 +40,7 @@ class CohereChatRequest(BaseChatRequest):
         """,
     )
     model: Optional[str] = Field(
-        "command-r-plus",
+        "c4ai-aya-expanse-32b",
         title="Model",
         description="The model to use for generating the response.",
     )
