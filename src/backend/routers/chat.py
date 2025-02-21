@@ -73,7 +73,9 @@ async def chat_stream(
     )
 
 
-@router.post("/chat-stream/regenerate", dependencies=[Depends(validate_deployment_header)])
+@router.post(
+    "/chat-stream/regenerate", dependencies=[Depends(validate_deployment_header)]
+)
 async def regenerate_chat_stream(
     chat_request: CohereChatRequest,
     session: DBSessionDep,
@@ -185,3 +187,68 @@ async def chat(
         ctx=ctx,
     )
     return response
+
+
+from fastapi import APIRouter, Depends
+from typing import Any, Dict
+
+from backend.model_deployments.cohere_platform import CohereDeployment
+from backend.schemas.chat import NonStreamedChatResponse
+from backend.schemas.cohere_chat import CohereChatRequest
+from backend.schemas.context import Context
+from backend.services.context import get_context
+from backend.database_models.database import DBSessionDep
+from backend.services.request_validators import validate_deployment_header
+
+router = APIRouter(
+    prefix="/v1",
+    tags=["experimental"],
+)
+
+
+@router.post("/chat-ab-test")
+async def chat_ab_test(
+    chat_request: CohereChatRequest,
+    session: DBSessionDep,
+    ctx: Context = Depends(get_context),
+) -> Dict[str, NonStreamedChatResponse | str | bool]:
+    """
+    Test endpoint that makes two identical chat requests using c4ai-aya-expanse-32b model
+    and returns both responses.
+    """
+    try:
+        # Set model explicitly
+        if not chat_request.model:
+            chat_request.model = "c4ai-aya-expanse-32b"
+
+        if chat_request.model:  # Type check guard
+            ctx.with_model(chat_request.model)
+
+        # Create two separate deployment instances
+        deployment_a = CohereDeployment()
+        deployment_b = CohereDeployment()
+
+        # Initialize responses
+        response_a = None
+        response_b = None
+
+        # Make first call
+        async for response in deployment_a.invoke_chat(chat_request, ctx=ctx):
+            response_a = response
+
+        # Make second call
+        async for response in deployment_b.invoke_chat(chat_request, ctx=ctx):
+            response_b = response
+
+        return {
+            "variant_a": response_a,
+            "variant_b": response_b,
+            "model": chat_request.model,
+            "success": True,
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "model": chat_request.model if chat_request.model else "unknown",
+            "success": False,
+        }
