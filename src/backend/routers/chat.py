@@ -1,4 +1,4 @@
-from typing import Any, Generator
+from typing import Any, Dict, Generator
 
 from fastapi import APIRouter, Depends
 from sse_starlette.sse import EventSourceResponse
@@ -7,6 +7,7 @@ from backend.chat.custom.custom import CustomChat
 from backend.config.routers import RouterName
 from backend.crud import agent_tool_metadata as agent_tool_metadata_crud
 from backend.database_models.database import DBSessionDep
+from backend.model_deployments.cohere_platform import CohereDeployment
 from backend.schemas.agent import Agent, AgentToolMetadata
 from backend.schemas.chat import ChatResponseEvent, NonStreamedChatResponse
 from backend.schemas.cohere_chat import CohereChatRequest
@@ -189,17 +190,6 @@ async def chat(
     return response
 
 
-from fastapi import APIRouter, Depends
-from typing import Any, Dict
-
-from backend.model_deployments.cohere_platform import CohereDeployment
-from backend.schemas.chat import NonStreamedChatResponse
-from backend.schemas.cohere_chat import CohereChatRequest
-from backend.schemas.context import Context
-from backend.services.context import get_context
-from backend.database_models.database import DBSessionDep
-from backend.services.request_validators import validate_deployment_header
-
 router = APIRouter(
     prefix="/v1",
     tags=["experimental"],
@@ -213,62 +203,112 @@ async def chat_ab_test(
     ctx: Context = Depends(get_context),
 ) -> Dict[str, Any]:
     """
-    Test endpoint that makes two identical chat requests using c4ai-aya-expanse-32b model
-    and returns both responses.
+    Test endpoint that makes two identical chat requests using the same model
+    and returns both responses using the full CustomChat workflow.
     """
     try:
-        # Set model explicitly
+        # Set model explicitly if not provided
         if not chat_request.model:
             chat_request.model = "c4ai-aya-expanse-32b"
 
         if chat_request.model:  # Type check guard
             ctx.with_model(chat_request.model)
 
-        # Create two separate deployment instances
-        deployment_a = CohereDeployment()
-        deployment_b = CohereDeployment()
+        # Process the first chat request
+        (
+            session,
+            chat_request_a,
+            response_message_a,
+            should_store_a,
+            managed_tools_a,
+            next_message_position_a,
+            ctx_a,
+        ) = process_chat(session, chat_request, ctx)
 
-        # Initialize responses
-        response_a = None
-        response_b = None
+        # Create a deep copy of the chat request for variant B
+        # This ensures we have a fresh request object
+        chat_request_b = CohereChatRequest(**chat_request.model_dump())
 
-        # Create a fresh request for the second call using the original data
-        # instead of trying to deep copy the complex object
-        request_data_b = {
-            "message": chat_request.message,
-            "chat_history": [],  # Start with empty history for the second call
-            "model": chat_request.model,
-            "agent_id": chat_request.agent_id
-            if hasattr(chat_request, "agent_id")
-            else None,
-            # Add other fields as needed
-        }
-        chat_request_b = CohereChatRequest(**request_data_b)
-
-        # Get a fresh context for the second call
+        # Create a new context for variant B with the same key attributes
         ctx_b = Context()
-        if chat_request.model:
-            ctx_b.with_model(chat_request.model)
-        if hasattr(chat_request, "agent_id") and chat_request.agent_id:
+        ctx_b.with_model(chat_request.model)
+        ctx_b.with_deployment_name(ctx.get_deployment_name())
+        ctx_b.with_user_id(ctx.get_user_id())
+
+        # If there's an agent, handle it
+        if chat_request.agent_id:
             ctx_b.with_agent_id(chat_request.agent_id)
 
-        # Make first call
-        async for response in deployment_a.invoke_chat(chat_request, ctx=ctx):
-            response_a = response
+            # If ctx_a has agent-related data, copy it
+            agent = ctx_a.get_agent()
+            if agent:
+                ctx_b.with_agent(agent)
 
-        # Make second call with the fresh request and context
-        async for response in deployment_b.invoke_chat(chat_request_b, ctx=ctx_b):
-            response_b = response
+            agent_tool_metadata = ctx_a.get_agent_tool_metadata()
+            if agent_tool_metadata:
+                ctx_b.with_agent_tool_metadata(agent_tool_metadata)
+
+        # Process the second chat request
+        # Note: We're creating a new conversation for the second request
+        # This is necessary to avoid ID conflicts
+        (
+            session_b,
+            chat_request_b,
+            response_message_b,
+            should_store_b,
+            managed_tools_b,
+            next_message_position_b,
+            ctx_b,
+        ) = process_chat(session, chat_request_b, ctx_b)
+
+        # Create chat instances for both variants
+        chat_a = CustomChat()
+        chat_b = CustomChat()
+
+        # Get response for variant A
+        response_a = await generate_chat_response(
+            session,
+            chat_a.chat(
+                chat_request_a,
+                session=session,
+                stream=False,
+                managed_tools=managed_tools_a,
+                ctx=ctx_a,
+            ),
+            response_message_a,
+            should_store=False,  # Don't store either response
+            next_message_position=next_message_position_a,
+            ctx=ctx_a,
+        )
+
+        # Get response for variant B
+        response_b = await generate_chat_response(
+            session_b,
+            chat_b.chat(
+                chat_request_b,
+                session=session_b,
+                stream=False,
+                managed_tools=managed_tools_b,
+                ctx=ctx_b,
+            ),
+            response_message_b,
+            should_store=False,  # Don't store either response
+            next_message_position=next_message_position_b,
+            ctx=ctx_b,
+        )
 
         return {
-            "variant_a": response_a,
-            "variant_b": response_b,
+            "variant_a": response_a.model_dump() if response_a else None,
+            "variant_b": response_b.model_dump() if response_b else None,
             "model": chat_request.model,
             "success": True,
         }
     except Exception as e:
+        import traceback
+
         return {
             "error": str(e),
             "model": chat_request.model if chat_request.model else "unknown",
             "success": False,
+            "stack_trace": traceback.format_exc(),
         }
