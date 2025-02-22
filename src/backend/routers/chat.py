@@ -225,8 +225,9 @@ async def chat_ab_test(
             ctx_a,
         ) = process_chat(session, chat_request, ctx)
 
-        # Create a deep copy of the chat request for variant B
-        # This ensures we have a fresh request object
+        # Create a deep copy of the original chat request for variant B
+        import copy
+
         chat_request_b = CohereChatRequest(**chat_request.model_dump())
 
         # Create a new context for variant B with the same key attributes
@@ -234,6 +235,11 @@ async def chat_ab_test(
         ctx_b.with_model(chat_request.model)
         ctx_b.with_deployment_name(ctx.get_deployment_name())
         ctx_b.with_user_id(ctx.get_user_id())
+
+        # Generate a trace ID for context B
+        import uuid
+
+        ctx_b.with_trace_id(str(uuid.uuid4()))
 
         # If there's an agent, handle it
         if chat_request.agent_id:
@@ -249,8 +255,6 @@ async def chat_ab_test(
                 ctx_b.with_agent_tool_metadata(agent_tool_metadata)
 
         # Process the second chat request
-        # Note: We're creating a new conversation for the second request
-        # This is necessary to avoid ID conflicts
         (
             session_b,
             chat_request_b,
@@ -276,7 +280,7 @@ async def chat_ab_test(
                 ctx=ctx_a,
             ),
             response_message_a,
-            should_store=False,  # Don't store either response
+            should_store=False,
             next_message_position=next_message_position_a,
             ctx=ctx_a,
         )
@@ -292,7 +296,7 @@ async def chat_ab_test(
                 ctx=ctx_b,
             ),
             response_message_b,
-            should_store=False,  # Don't store either response
+            should_store=False,
             next_message_position=next_message_position_b,
             ctx=ctx_b,
         )
