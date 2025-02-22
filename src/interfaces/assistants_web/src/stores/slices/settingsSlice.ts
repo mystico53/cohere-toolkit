@@ -6,6 +6,7 @@ const INITIAL_STATE = {
   isRightPanelOpen: false,
   showSteps: true,
   showCitations: true,
+  humanFeedback: false,
   isHotKeysDialogOpen: false,
 };
 
@@ -15,6 +16,7 @@ type State = {
   isRightPanelOpen: boolean;
   showSteps: boolean;
   showCitations: boolean;
+  humanFeedback: boolean;
   isHotKeysDialogOpen: boolean;
 };
 
@@ -24,6 +26,7 @@ type Actions = {
   setRightPanelOpen: (isOpen: boolean) => void;
   setShowSteps: (showSteps: boolean) => void;
   setShowCitations: (showCitations: boolean) => void;
+  setHumanFeedback: (humanFeedback: boolean) => void;
   setIsHotKeysDialogOpen: (isOpen: boolean) => void;
 };
 
@@ -60,6 +63,12 @@ export const createSettingsSlice: StateCreator<SettingsStore, [], [], SettingsSt
     set((state) => ({
       ...state,
       showCitations: showCitations,
+    }));
+  },
+  setHumanFeedback(humanFeedback: boolean) { // Implement the action
+    set((state) => ({
+      ...state,
+      humanFeedback: humanFeedback,
     }));
   },
   setIsHotKeysDialogOpen(isOpen: boolean) {

@@ -10,6 +10,7 @@ import {
   IconName,
   ShowCitationsToggle,
   ShowStepsToggle,
+  ShowHumanFeedbackToggle,
   Tabs,
   Text,
 } from '@/components/UI';
@@ -89,6 +90,7 @@ const Advanced: React.FC = () => (
     </Text>
     <ShowStepsToggle />
     <ShowCitationsToggle />
+    <ShowHumanFeedbackToggle />
   </Wrapper>
 );
 
