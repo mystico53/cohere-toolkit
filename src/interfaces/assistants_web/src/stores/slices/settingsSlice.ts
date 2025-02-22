@@ -6,7 +6,7 @@ const INITIAL_STATE = {
   isRightPanelOpen: false,
   showSteps: true,
   showCitations: true,
-  humanFeedback: false,
+  humanFeedback: true,
   isHotKeysDialogOpen: false,
 };
 

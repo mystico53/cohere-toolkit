@@ -28,7 +28,7 @@ import { STRINGS } from '@/constants/strings';
 import { useChatRoutes } from '@/hooks/chatRoutes';
 import { useUpdateConversationTitle } from '@/hooks/generateTitle';
 import { StreamingChatParams, useStreamChat } from '@/hooks/streamChat';
-import { useCitationsStore, useConversationStore, useFilesStore, useParamsStore } from '@/stores';
+import { useCitationsStore, useConversationStore, useFilesStore, useParamsStore, useSettingsStore } from '@/stores';
 import { OutputFiles } from '@/stores/slices/citationsSlice';
 import {
   BotState,
@@ -80,6 +80,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
   const {
     params: { temperature, preamble, tools, model, deployment, deploymentConfig, fileIds },
   } = useParamsStore();
+  const { humanFeedback } = useSettingsStore();
   const {
     conversation: { id, messages },
     setConversation,
@@ -528,6 +529,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
       preamble,
       model,
       agent_id: agentId,
+      ab_test: humanFeedback,
       ...restOverrides,
     };
   };
