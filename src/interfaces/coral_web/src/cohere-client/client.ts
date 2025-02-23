@@ -81,7 +81,7 @@ export class CohereClient {
     onClose,
     onError,
   }: {
-    request: CohereChatRequest;
+    request: CohereChatRequest & { humanFeedback?: boolean };
     headers?: Record<string, string>;
     agentId?: string;
     signal?: AbortSignal;
@@ -91,12 +91,12 @@ export class CohereClient {
     onError?: FetchEventSourceInit['onerror'];
   }) {
     const chatRequest = mapToChatRequest(request);
-    const requestBody = JSON.stringify({
-      ...chatRequest,
-    });
+  const endpoint = `${this.getEndpoint(request.humanFeedback ? 'chat-ab-test' : 'chat-stream')}`;
   
-    const endpointType = request.ab_test ? 'chat-ab-test' : 'chat-stream';
-    const endpoint = `${this.getEndpoint(endpointType)}${agentId ? `?agent_id=${agentId}` : ''}`;
+  const requestBody = JSON.stringify({
+    ...chatRequest,
+    ...(request.humanFeedback ? { ab_test: true } : {})
+  });
   
     return await fetchEventSource(endpoint, {
       method: 'POST',

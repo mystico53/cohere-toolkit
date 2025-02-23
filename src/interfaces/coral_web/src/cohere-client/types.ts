@@ -1,4 +1,4 @@
-import { FinishReason, getFinishReasonErrorMessage } from '@/cohere-client';
+import { FinishReason, getFinishReasonErrorMessage, CohereChatRequest } from '@/cohere-client';
 
 export class CohereNetworkError extends Error {
   public status: number;
@@ -39,3 +39,7 @@ export type Fetch = (input: RequestInfo, init?: RequestInit) => Promise<Response
 export type ExperimentalFeatures = {
   USE_AGENTS_VIEW: boolean;
 };
+
+export interface ExtendedChatRequest extends CohereChatRequest {
+  humanFeedback?: boolean;
+}
