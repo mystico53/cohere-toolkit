@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -11,7 +13,7 @@ const useEmptyPersistedStore = create<PersistedStore>((...a) => ({
   ...createSettingsSlice(...a),
 }));
 
-const usePersistedStore = create<PersistedStore>()(
+export const usePersistedStore = create<PersistedStore>()(
   persist(
     (...a) => ({
       ...createSettingsSlice(...a),

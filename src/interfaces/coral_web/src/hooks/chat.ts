@@ -80,11 +80,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
   const {
     params: { temperature, preamble, tools, model, deployment, deploymentConfig, fileIds },
   } = useParamsStore();
-  
-  const { humanFeedback } = useSettingsStore();
-  useEffect(() => {
-    console.log('Human feedback setting:', humanFeedback); // Add this
-  }, [humanFeedback]);
 
   const {
     conversation: { id, messages },
@@ -519,17 +514,11 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
       },
     });
   };
-
-  type ExtendedChatRequest = CohereChatRequest & {
-    humanFeedback?: boolean;
-  };
   
   // Update the function signatures to use the extended type
   const getChatRequest = (message: string, overrides?: ChatRequestOverrides): ExtendedChatRequest => {
     const { tools: overrideTools, ...restOverrides } = overrides ?? {};
     const requestTools = overrideTools ?? tools ?? undefined;
-    
-    console.log('Creating chat request with humanFeedback:', humanFeedback);
     
     return {
       message,
@@ -540,7 +529,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
       preamble,
       model,
       agent_id: agentId,
-      humanFeedback,
       ...restOverrides,
     };
   };

@@ -1,11 +1,7 @@
 import { DEFAULT_CHAT_TEMPERATURE } from './constants';
 import { CohereChatRequest } from './generated';
 
-type ExtendedChatRequest = CohereChatRequest & {
-  humanFeedback?: boolean;
-};
-
-export const mapToChatRequest = (request: ExtendedChatRequest): ExtendedChatRequest => {
+export const mapToChatRequest = (request: CohereChatRequest): CohereChatRequest => {
   return {
     agent_id: request.agent_id,
     message: request.message,
@@ -16,6 +12,5 @@ export const mapToChatRequest = (request: ExtendedChatRequest): ExtendedChatRequ
     documents: request.documents,
     tools: request.tools,
     file_ids: request.file_ids,
-    humanFeedback: request.humanFeedback,
   };
 };

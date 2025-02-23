@@ -47,11 +47,6 @@ export const useStreamChat = () => {
   const queryClient = useQueryClient();
   const { data: experimentalFeatures } = useExperimentalFeatures();
 
-  
-  useEffect(() => {
-    console.log('Experimental features:', experimentalFeatures);
-  }, [experimentalFeatures]);
-
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
@@ -90,7 +85,11 @@ export const useStreamChat = () => {
 
         const chatStreamParams = {
           request: {
-            ...request,
+            message: request.message,
+            preamble: request.preamble,
+            temperature: request.temperature,
+            conversation_id: request.conversation_id,
+            tools: request.tools
           },
           headers,
           signal: abortControllerRef.current.signal,
@@ -128,11 +127,6 @@ export const useStreamChat = () => {
             onFinish();
           },
         };
-        console.log('Chat Parameters:', {
-          humanFeedback: experimentalFeatures?.humanFeedback,
-          endpoint: chatStreamParams.request.humanFeedback ? 'chat-ab-test' : 'chat-stream',
-          experimentalFeatures
-        });
         await cohereClient.chat({ ...chatStreamParams });
       } catch (e) {
         if (isUnauthorizedError(e)) {

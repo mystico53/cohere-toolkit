@@ -21,6 +21,7 @@ from backend.tools.utils.tools_checkers import tool_has_category
 
 MAX_STEPS = 15
 
+
 class CustomChat(BaseChat):
     """Custom chat flow not using integrations for models."""
 
@@ -68,7 +69,9 @@ class CustomChat(BaseChat):
         self.is_first_start = True
 
         try:
-            stream = self.call_chat(self.chat_request, deployment_model, session, ctx, **kwargs)
+            stream = self.call_chat(
+                self.chat_request, deployment_model, session, ctx, **kwargs
+            )
 
             async for event in stream:
                 result = self.handle_event(event, chat_request, ctx)
@@ -76,8 +79,11 @@ class CustomChat(BaseChat):
                 if result:
                     yield result
 
-                if (event["event_type"] == StreamEvent.STREAM_END
-                and self.is_final_event(event, chat_request)):
+                if event[
+                    "event_type"
+                ] == StreamEvent.STREAM_END and self.is_final_event(
+                    event, chat_request
+                ):
                     logger.debug(event=f"Final event: {event}")
                     break
         except Exception as e:
@@ -91,7 +97,6 @@ class CustomChat(BaseChat):
                 "error": str(e),
                 "status_code": 500,
             }
-
 
     def is_final_event(
         self, event: Dict[str, Any], chat_request: CohereChatRequest
@@ -158,14 +163,20 @@ class CustomChat(BaseChat):
     ):
         logger = ctx.get_logger()
         managed_tools = self.get_managed_tools(chat_request)
-        managed_tools_full_schema = self.get_managed_tools(chat_request, full_schema=True)
+        managed_tools_full_schema = self.get_managed_tools(
+            chat_request, full_schema=True
+        )
         user_id = ctx.get_user_id()
         agent_id = ctx.get_agent_id()
 
         file_reader_tools_names = []
         if managed_tools:
             chat_request.tools = managed_tools
-            file_reader_tools_names = [tool.name for tool in managed_tools_full_schema if tool_has_category(tool, ToolCategory.FileLoader)]
+            file_reader_tools_names = [
+                tool.name
+                for tool in managed_tools_full_schema
+                if tool_has_category(tool, ToolCategory.FileLoader)
+            ]
 
         # Get files if available
         all_files = []

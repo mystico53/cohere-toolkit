@@ -14,6 +14,7 @@ import {
   UpdateConversationRequest,
   UpdateDeploymentEnv,
 } from '@/cohere-client';
+import { usePersistedStore } from '@/stores/persistedStore';
 
 import { mapToChatRequest } from './mappings';
 
@@ -81,7 +82,7 @@ export class CohereClient {
     onClose,
     onError,
   }: {
-    request: CohereChatRequest & { humanFeedback?: boolean };
+    request: CohereChatRequest;
     headers?: Record<string, string>;
     agentId?: string;
     signal?: AbortSignal;
@@ -90,16 +91,13 @@ export class CohereClient {
     onClose?: FetchEventSourceInit['onclose'];
     onError?: FetchEventSourceInit['onerror'];
   }) {
-    console.log('Chat request:', request);
-    const useHumanFeedback = request.humanFeedback === true;
-    console.log('Using Human Feedback:', useHumanFeedback);
-    const endpoint = `${this.getEndpoint(useHumanFeedback ? 'chat-human-feedback' : 'chat-stream')}`;
+    const humanFeedback = usePersistedStore.getState().settings.humanFeedback;
+    
+    const endpoint = `${this.getEndpoint(humanFeedback ? 'chat-human-feedback' : 'chat-stream')}`;
     console.log('Selected endpoint:', endpoint);
-
-  const chatRequest = mapToChatRequest(request);
-  const requestBody = JSON.stringify(chatRequest);
-
-  console.debug(`Using endpoint: ${endpoint}`);
+    
+    const requestBody = JSON.stringify(request);
+    console.log('Final request being sent:', JSON.stringify(request, null, 2));
     return await fetchEventSource(endpoint, {
       method: 'POST',
       headers: { ...this.getHeaders(), ...headers },
