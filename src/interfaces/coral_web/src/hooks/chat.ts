@@ -82,10 +82,9 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
   } = useParamsStore();
   
   const { humanFeedback } = useSettingsStore();
+  console.log('Initial humanFeedback value:', humanFeedback);
   useEffect(() => {
-    if (humanFeedback) {
-      console.log('Human feedback is enabled for chat');
-    }
+    console.log('Human feedback setting:', humanFeedback); // Add this
   }, [humanFeedback]);
 
   const {
@@ -524,9 +523,10 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
 
   const getChatRequest = (message: string, overrides?: ChatRequestOverrides): CohereChatRequest => {
     const { tools: overrideTools, ...restOverrides } = overrides ?? {};
-
     const requestTools = overrideTools ?? tools ?? undefined;
-
+    
+    console.log('Creating chat request with ab_test:', humanFeedback); 
+    
     return {
       message,
       conversation_id: id,
@@ -536,7 +536,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
       preamble,
       model,
       agent_id: agentId,
-      ab_test: humanFeedback,
+      ...(humanFeedback ? { ab_test: true } : {}),
       ...restOverrides,
     };
   };
