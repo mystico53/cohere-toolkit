@@ -92,31 +92,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  frontend:
-    build:
-      target: ${BUILD_TARGET:-dev}
-      context: ./src/interfaces/assistants_web
-      dockerfile: Dockerfile
-    environment:
-      NODE_ENV: development
-      API_HOSTNAME: http://backend:8000
-      NEXT_PUBLIC_API_HOSTNAME: ${NEXT_PUBLIC_API_HOSTNAME}
-      NEXT_PUBLIC_FRONTEND_HOSTNAME: ${NEXT_PUBLIC_FRONTEND_HOSTNAME}
-      NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID}
-      NEXT_PUBLIC_GOOGLE_DRIVE_DEVELOPER_KEY: ${NEXT_PUBLIC_GOOGLE_DRIVE_DEVELOPER_KEY}
-    restart: always
-    networks:
-      - proxynet
-    ports:
-      - 4000:4000
-    develop:
-      watch:
-        - action: sync+restart
-          path: ./src/interfaces/assistants_web
-          target: /app
-          ignore:
-            - node_modules/
-
   frontend-coral:  
     build:
       target: ${BUILD_TARGET:-dev}
