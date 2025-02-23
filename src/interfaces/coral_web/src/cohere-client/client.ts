@@ -1,4 +1,5 @@
 import { FetchEventSourceInit, fetchEventSource } from '@microsoft/fetch-event-source';
+import { ChatResponseEvent } from './types';
 
 import {
   Body_batch_upload_file_v1_conversations_batch_upload_file_post,
@@ -340,27 +341,83 @@ export class CohereClient {
     onFinish?: () => void;
   }) {
     const endpoint = `${this.getEndpoint('chat-human-feedback')}`;
-    const requestBody = JSON.stringify(request);
-  
-    // Start with one stream first
-    await fetchEventSource(endpoint, {
-      method: 'POST',
-      headers: { ...this.getHeaders(), ...headers },
-      body: requestBody,
-      signal,
-      openWhenHidden: true,
-      onmessage: (event: EventSourceMessage) => {
-        try {
-          if (!event.data) return;
-          const data = JSON.parse(event.data);
-          onMessage1(data);
-        } catch (e) {
-          const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
-          onError1?.(new Error(errMsg));
+    
+    let stream1Complete = false;
+    let stream2Complete = false;
+
+    const checkCompletion = () => {
+      if (stream1Complete && stream2Complete && onFinish) {
+        onFinish();
+      }
+    };
+
+    // Create two different request bodies
+    const request1 = {
+      ...request,
+      stream_metadata: { id: 'stream1' }
+    };
+
+    const request2 = {
+      ...request,
+      stream_metadata: { id: 'stream2' }
+    };
+
+    await Promise.all([
+      // Stream 1
+      fetchEventSource(endpoint, {
+        method: 'POST',
+        headers: { 
+          ...this.getHeaders(), 
+          ...headers,
+          'stream-id': 'stream1'
+        },
+        body: JSON.stringify(request1),
+        signal,
+        openWhenHidden: true,
+        onmessage: (event: EventSourceMessage) => {
+          try {
+            if (!event.data) return;
+            const data = JSON.parse(event.data);
+            onMessage1(data);
+          } catch (e) {
+            const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
+            onError1?.(new Error(errMsg));
+          }
+        },
+        onerror: onError1,
+        onclose: () => {
+          stream1Complete = true;
+          checkCompletion();
         }
-      },
-      onerror: onError1,
-      onclose: onFinish
-    });
+      }),
+
+      // Stream 2  
+      fetchEventSource(endpoint, {
+        method: 'POST',
+        headers: { 
+          ...this.getHeaders(), 
+          ...headers,
+          'stream-id': 'stream2'
+        },
+        body: JSON.stringify(request2),
+        signal,
+        openWhenHidden: true,
+        onmessage: (event: EventSourceMessage) => {
+          try {
+            if (!event.data) return;
+            const data = JSON.parse(event.data);
+            onMessage2(data);
+          } catch (e) {
+            const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
+            onError2?.(new Error(errMsg));
+          }
+        },
+        onerror: onError2,
+        onclose: () => {
+          stream2Complete = true;
+          checkCompletion();
+        }
+      })
+    ]);
   }
 }

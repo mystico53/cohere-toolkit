@@ -16,6 +16,7 @@ class Context(BaseModel):
     """
     Context for a request
     """
+
     request: Optional[dict] = {}
     response: Optional[dict] = {}
     receive: Optional[dict] = {}
@@ -85,9 +86,7 @@ class Context(BaseModel):
         self.agent = agent
         return self
 
-    def with_agent_tool_metadata(
-        self, agent_tool_metadata: AgentToolMetadata
-    ) -> Self:
+    def with_agent_tool_metadata(self, agent_tool_metadata: AgentToolMetadata) -> Self:
         self.agent_tool_metadata = agent_tool_metadata
         return self
 
@@ -193,3 +192,8 @@ class Context(BaseModel):
 
     def get_agent_tool_metadata(self):
         return self.agent_tool_metadata
+
+    def with_stream_id(self, stream_id: str | None) -> "Context":
+        """Add stream ID to the context."""
+        self._stream_id = stream_id
+        return self

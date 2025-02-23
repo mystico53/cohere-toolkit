@@ -43,3 +43,14 @@ export type ExperimentalFeatures = {
 export interface ExtendedChatRequest extends CohereChatRequest {
   humanFeedback?: boolean;
 }
+
+export interface ChatResponseEvent {
+  event: string;  
+  data: {
+    text?: string;
+    generation_id?: string;  
+    conversation_id?: string;
+    finish_reason?: string;
+    error?: string | null;
+  };
+}

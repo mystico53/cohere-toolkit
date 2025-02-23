@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, Generator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from sse_starlette.sse import EventSourceResponse
 
 from backend.chat.custom.custom import CustomChat
@@ -208,6 +208,9 @@ async def chat_human_feedback(
     chat_request: CohereChatRequest,
     session: DBSessionDep,
     ctx: Context = Depends(get_context),
+    stream_id: str | None = Header(
+        default=None
+    ),  # Add this to get stream ID from header
 ) -> EventSourceResponse:
     """
     Streaming endpoint for chat with human feedback
@@ -220,7 +223,9 @@ async def chat_human_feedback(
     # Create new request without human_feedback
     chat_request = CohereChatRequest(**chat_data)
 
-    # Rest of your endpoint code...
+    # Add stream identification to context
+    ctx.with_stream_id(stream_id)
+
     if not chat_request.model:
         chat_request.model = "c4ai-aya-expanse-32b"
 
@@ -251,7 +256,10 @@ async def chat_human_feedback(
             ctx=ctx,
         ),
         media_type="text/event-stream",
-        headers={"Connection": "keep-alive"},
+        headers={
+            "Connection": "keep-alive",
+            "X-Stream-ID": stream_id,  # Echo back the stream ID
+        },
         send_timeout=300,
         ping=5,
     )
