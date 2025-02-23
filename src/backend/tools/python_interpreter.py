@@ -19,7 +19,7 @@ class PythonInterpreter(BaseTool):
     """
 
     ID = "toolkit_python_interpreter"
-    INTERPRETER_URL = Settings().get('tools.python_interpreter.url')
+    INTERPRETER_URL = Settings().get("tools.python_interpreter.url")
 
     @classmethod
     def is_available(cls) -> bool:
@@ -42,7 +42,7 @@ class PythonInterpreter(BaseTool):
                     "required": True,
                 }
             },
-            is_visible=True,
+            is_visible=False,
             is_available=cls.is_available(),
             error_message=cls.generate_error_message(),
             category=ToolCategory.Function,
@@ -51,10 +51,13 @@ class PythonInterpreter(BaseTool):
                 "in a static sandbox without internet access and without interactive mode, "
                 "so print output or save output to a file."
             ),
-        ) # type: ignore
+        )  # type: ignore
 
     async def call(
-        self, parameters: dict, ctx: Context, **kwargs: Any,
+        self,
+        parameters: dict,
+        ctx: Context,
+        **kwargs: Any,
     ) -> list[dict[str, Any]]:
         if not self.INTERPRETER_URL:
             raise Exception("Python Interpreter tool called while URL not set")

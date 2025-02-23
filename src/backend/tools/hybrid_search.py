@@ -18,9 +18,11 @@ class HybridWebSearch(BaseTool):
     POST_RERANK_MAX_RESULTS = 5
     AVAILABLE_WEB_SEARCH_TOOLS = [TavilyWebSearch, GoogleWebSearch, BraveWebSearch]
     WEB_SCRAPE_TOOL = WebScrapeTool
-    ENABLED_WEB_SEARCH_TOOLS = Settings().get('tools.hybrid_web_search.enabled_web_searches')
-    DOMAIN_FILTER = Settings().get('tools.hybrid_web_search.domain_filters') or []
-    SITE_FILTER = Settings().get('tools.hybrid_web_search.site_filters') or []
+    ENABLED_WEB_SEARCH_TOOLS = Settings().get(
+        "tools.hybrid_web_search.enabled_web_searches"
+    )
+    DOMAIN_FILTER = Settings().get("tools.hybrid_web_search.domain_filters") or []
+    SITE_FILTER = Settings().get("tools.hybrid_web_search.site_filters") or []
 
     def __init__(self):
         available_search_tools = self.get_available_search_tools()
@@ -52,15 +54,15 @@ class HybridWebSearch(BaseTool):
                     "required": True,
                 }
             },
-            is_visible=True,
+            is_visible=False,
             is_available=cls.is_available(),
             error_message=cls.generate_error_message(),
             category=ToolCategory.WebSearch,
             description=(
                 "Returns a list of relevant document snippets for a textual query "
                 "retrieved from the internet using a mix of any existing Web Search tools."
-            )
-        ) # type: ignore
+            ),
+        )  # type: ignore
 
     @classmethod
     def get_available_search_tools(cls):
@@ -139,8 +141,7 @@ class HybridWebSearch(BaseTool):
             documents = [
                 f"{result.get('title', '')} {result.get('text')}"
                 for result in results_batch
-                if isinstance(result, dict)
-                and "text" in result
+                if isinstance(result, dict) and "text" in result
             ]
 
             batch_output = await model.invoke_rerank(
@@ -163,4 +164,4 @@ class HybridWebSearch(BaseTool):
                 seen_urls.append(url)
                 reranked.append(result)
 
-        return reranked[:self.POST_RERANK_MAX_RESULTS]
+        return reranked[: self.POST_RERANK_MAX_RESULTS]

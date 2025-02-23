@@ -54,7 +54,7 @@ class MeetingTool(BaseTool):
                     "required": False,
                 },
             },
-            is_visible=True,
+            is_visible=False,
             is_available=cls.is_available(),
             category=ToolCategory.Function,
             error_message=cls.generate_error_message(),

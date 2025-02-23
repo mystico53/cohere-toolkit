@@ -80,7 +80,14 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
   const {
     params: { temperature, preamble, tools, model, deployment, deploymentConfig, fileIds },
   } = useParamsStore();
+  
   const { humanFeedback } = useSettingsStore();
+  useEffect(() => {
+    if (humanFeedback) {
+      console.log('Human feedback is enabled for chat');
+    }
+  }, [humanFeedback]);
+
   const {
     conversation: { id, messages },
     setConversation,

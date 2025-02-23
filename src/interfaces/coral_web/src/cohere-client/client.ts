@@ -94,14 +94,16 @@ export class CohereClient {
     const requestBody = JSON.stringify({
       ...chatRequest,
     });
-
-    const endpoint = `${this.getEndpoint('chat-stream')}${agentId ? `?agent_id=${agentId}` : ''}`;
+  
+    const endpointType = request.ab_test ? 'chat-ab-test' : 'chat-stream';
+    const endpoint = `${this.getEndpoint(endpointType)}${agentId ? `?agent_id=${agentId}` : ''}`;
+  
     return await fetchEventSource(endpoint, {
       method: 'POST',
       headers: { ...this.getHeaders(), ...headers },
       body: requestBody,
       signal,
-      openWhenHidden: true, // When false, the requests will be paused when the tab is hidden and resume/retry when the tab is visible again
+      openWhenHidden: true,
       onopen: async (response: Response) => {
         if (
           response.status !== 200 &&
@@ -302,7 +304,7 @@ export class CohereClient {
     return this.cohereService.snapshot.deleteSnapshotV1SnapshotsSnapshotIdDelete({ snapshotId });
   }
 
-  private getEndpoint(endpoint: 'chat-stream' | 'google/auth' | 'oidc/auth') {
+  private getEndpoint(endpoint: 'chat-stream' | 'google/auth' | 'oidc/auth' | 'chat-ab-test') {
     return `${this.hostname}/v1/${endpoint}`;
   }
 

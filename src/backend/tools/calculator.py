@@ -31,7 +31,7 @@ class Calculator(BaseTool):
                     "required": True,
                 }
             },
-            is_visible=True,
+            is_visible=False,
             is_available=Calculator.is_available(),
             category=ToolCategory.Function,
             error_message=cls.generate_error_message(),
