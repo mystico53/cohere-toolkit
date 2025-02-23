@@ -6,6 +6,7 @@ import { useModels } from '@/hooks/deployments';
 import { useSettingsDefaults } from '@/hooks/settings';
 import { useParamsStore } from '@/stores';
 import { cn } from '@/utils';
+import { ShowHumanFeedbackToggle } from './ShowHumanFeedbackToggle';
 
 /**
  * @description Settings tab to adjust endpoint params like preamble and temperature.
@@ -53,6 +54,8 @@ export const SettingsTab: React.FC = () => {
         onChange={(temperature: number) => setParams({ temperature })}
         dataTestId="slider-temperature"
       />
+
+      <ShowHumanFeedbackToggle />
 
       <InputLabel label={STRINGS.preamble}>
         <textarea

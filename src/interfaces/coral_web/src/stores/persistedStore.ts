@@ -48,6 +48,8 @@ export const useSettingsStore = () => {
       settings: state.settings,
       setSettings: state.setSettings,
       setIsConvListPanelOpen: state.setIsConvListPanelOpen,
+      humanFeedback: state.settings.humanFeedback,
+      setHumanFeedback: (value: boolean) => state.setSettings({ humanFeedback: value }),
     }),
     shallow
   );

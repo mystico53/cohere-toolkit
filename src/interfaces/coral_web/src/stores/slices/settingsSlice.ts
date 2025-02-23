@@ -5,6 +5,7 @@ const INITIAL_STATE: Required<State> = {
   activeConfigDrawerTab: '',
   isConvListPanelOpen: true,
   isMobileConvListPanelOpen: false,
+  humanFeedback: true,
 };
 
 type State = {
@@ -12,11 +13,13 @@ type State = {
   activeConfigDrawerTab: string;
   isConvListPanelOpen: boolean;
   isMobileConvListPanelOpen: boolean;
+  humanFeedback: boolean;
 };
 
 type Actions = {
   setSettings: (settings: Partial<State>) => void;
   setIsConvListPanelOpen: (isOpen: boolean) => void;
+  setHumanFeedback: (humanFeedback: boolean) => void;
 };
 
 export type SettingsStore = {
