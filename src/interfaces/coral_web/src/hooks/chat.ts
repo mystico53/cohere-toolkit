@@ -1,5 +1,7 @@
 import { UseMutateAsyncFunction, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useParallelStreamChat } from './parallelStreamChat';
+import { usePersistedStore } from '@/stores/persistedStore';
 
 import {
   ChatResponseEvent,
@@ -75,7 +77,12 @@ export type HandleSendChat = (
 
 export const useChat = (config?: { onSend?: (msg: string) => void }) => {
   const { chatMutation, abortController } = useStreamChat();
+  const { parallelChatMutation, abortController: parallelAbortController } = useParallelStreamChat();
   const { mutateAsync: streamChat } = chatMutation;
+
+  const [streamingMessage1, setStreamingMessage1] = useState<StreamingMessage | null>(null);
+  const [streamingMessage2, setStreamingMessage2] = useState<StreamingMessage | null>(null);
+  const [isParallelStreaming, setIsParallelStreaming] = useState(false);
 
   const {
     params: { temperature, preamble, tools, model, deployment, deploymentConfig, fileIds },
@@ -515,6 +522,10 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
     });
   };
   
+  interface ExtendedChatRequest extends CohereChatRequest {
+    humanFeedback?: boolean;
+  }
+
   // Update the function signatures to use the extended type
   const getChatRequest = (message: string, overrides?: ChatRequestOverrides): ExtendedChatRequest => {
     const { tools: overrideTools, ...restOverrides } = overrides ?? {};
@@ -533,15 +544,17 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
     };
   };
 
-  const handleChat: HandleSendChat = async (
+  const handleChat = async (
     { currentMessages = messages, suggestedMessage },
     overrides?: ChatRequestOverrides
   ) => {
     const message = (suggestedMessage || userMessage || '').trim();
-    if (message.length === 0 || isStreaming) {
+    if (message.length === 0 || isStreaming || isParallelStreaming) {
       return;
     }
 
+    const humanFeedback = usePersistedStore.getState().settings.humanFeedback;
+    
     config?.onSend?.(message);
     setUserMessage('');
 
@@ -550,20 +563,119 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
       'Deployment-Name': deployment ?? '',
       'Deployment-Config': deploymentConfig ?? '',
     };
-    let newMessages: ChatMessage[] = currentMessages;
 
+    let newMessages: ChatMessage[] = currentMessages;
     newMessages = newMessages.concat({
       type: MessageType.USER,
       text: message,
       files: composerFiles,
     });
 
-    await handleStreamConverse({
-      newMessages,
-      request,
-      headers,
-      streamConverse: streamChat,
-    });
+    if (humanFeedback) {
+      await handleParallelStreamConverse({
+        newMessages,
+        request,
+        headers
+      });
+    } else {
+      await handleStreamConverse({
+        newMessages,
+        request,
+        headers,
+        streamConverse: streamChat,
+      });
+    }
+  };
+
+  const handleParallelStreamConverse = async ({
+    newMessages,
+    request,
+    headers,
+  }: {
+    newMessages: ChatMessage[];
+    request: CohereChatRequest;
+    headers: Record<string, string>;
+  }) => {
+    setConversation({ messages: newMessages });
+    setIsParallelStreaming(true);
+    
+    let botResponse1 = '';
+    let botResponse2 = '';
+    
+    try {
+      await parallelChatMutation.mutateAsync({
+        request,
+        headers,
+        onMessage1: (eventData: ChatResponseEvent) => {
+          switch (eventData.event) {
+            case StreamEvent.TEXT_GENERATION: {
+              const data = eventData.data as StreamTextGeneration;
+              botResponse1 += data?.text ?? '';
+              setStreamingMessage1({
+                type: MessageType.BOT,
+                state: BotState.TYPING,
+                text: botResponse1,
+                isParallel: true
+              });
+              break;
+            }
+            case StreamEvent.STREAM_END: {
+              setStreamingMessage1({
+                type: MessageType.BOT,
+                state: BotState.FULFILLED,
+                text: botResponse1,
+                isParallel: true
+              });
+              break;
+            }
+          }
+        },
+        onMessage2: (eventData: ChatResponseEvent) => {
+          switch (eventData.event) {
+            case StreamEvent.TEXT_GENERATION: {
+              const data = eventData.data as StreamTextGeneration;
+              botResponse2 += data?.text ?? '';
+              setStreamingMessage2({
+                type: MessageType.BOT,
+                state: BotState.TYPING,
+                text: botResponse2,
+                isParallel: true
+              });
+              break;
+            }
+            case StreamEvent.STREAM_END: {
+              setStreamingMessage2({
+                type: MessageType.BOT,
+                state: BotState.FULFILLED,
+                text: botResponse2,
+                isParallel: true
+              });
+              break;
+            }
+          }
+        },
+        onError: (error) => {
+          setStreamingMessage1(createErrorMessage({
+            text: botResponse1,
+            error: error.message || STRINGS.generationError,
+            isParallel: true
+          }));
+          setStreamingMessage2(createErrorMessage({
+            text: botResponse2,
+            error: error.message || STRINGS.generationError,
+            isParallel: true
+          }));
+        },
+        onFinish: () => {
+          setIsParallelStreaming(false);
+        }
+      });
+    } catch (error) {
+      setIsParallelStreaming(false);
+      setStreamingMessage1(null);
+      setStreamingMessage2(null);
+      console.error('Error in parallel streaming:', error);
+    }
   };
 
   const handleRetry = () => {
@@ -599,6 +711,9 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
   return {
     userMessage,
     isStreaming,
+    isParallelStreaming,
+    streamingMessage1,
+    streamingMessage2,
     isStreamingToolEvents,
     handleSend: handleChat,
     handleStop,

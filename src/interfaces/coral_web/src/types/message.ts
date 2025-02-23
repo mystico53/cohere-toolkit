@@ -22,6 +22,7 @@ type BaseMessage = {
   type: MessageType;
   text: string;
   error?: string;
+  isParallel?: boolean;
 };
 
 /**

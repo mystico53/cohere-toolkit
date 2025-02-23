@@ -16,6 +16,7 @@ import {
 } from '@/cohere-client';
 import { usePersistedStore } from '@/stores/persistedStore';
 
+
 import { mapToChatRequest } from './mappings';
 
 export class CohereClient {
@@ -317,5 +318,49 @@ export class CohereClient {
       'X-Date': new Date().getTime().toString(),
     };
     return headers;
+  }
+
+  public async chatParallelFeedback({
+    request,
+    headers,
+    signal,
+    onMessage1,
+    onMessage2,
+    onError1,
+    onError2,
+    onFinish,
+  }: {
+    request: CohereChatRequest;
+    headers?: Record<string, string>;
+    signal?: AbortSignal;
+    onMessage1: (data: ChatResponseEvent) => void;
+    onMessage2: (data: ChatResponseEvent) => void;
+    onError1?: (error: unknown) => void;
+    onError2?: (error: unknown) => void;
+    onFinish?: () => void;
+  }) {
+    const endpoint = `${this.getEndpoint('chat-human-feedback')}`;
+    const requestBody = JSON.stringify(request);
+  
+    // Start with one stream first
+    await fetchEventSource(endpoint, {
+      method: 'POST',
+      headers: { ...this.getHeaders(), ...headers },
+      body: requestBody,
+      signal,
+      openWhenHidden: true,
+      onmessage: (event: EventSourceMessage) => {
+        try {
+          if (!event.data) return;
+          const data = JSON.parse(event.data);
+          onMessage1(data);
+        } catch (e) {
+          const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
+          onError1?.(new Error(errMsg));
+        }
+      },
+      onerror: onError1,
+      onclose: onFinish
+    });
   }
 }
