@@ -130,8 +130,8 @@ class CohereChatRequest(BaseChatRequest):
         title="Agent ID",
         description="The agent ID to use for the chat.",
     )
-    ab_test: Optional[bool] = Field(
+    human_feedback: Optional[bool] = Field(
         None,
-        title="AB Test",
-        description="Whether to use AB test endpoint for this request.",
+        title="Human Feedback",
+        description="Whether to use human feedback endpoint for this request.",
     )

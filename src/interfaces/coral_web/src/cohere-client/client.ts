@@ -90,11 +90,11 @@ export class CohereClient {
     onClose?: FetchEventSourceInit['onclose'];
     onError?: FetchEventSourceInit['onerror'];
   }) {
-  console.log('Chat request:', request); // Debug
-  const useAbTest = request.humanFeedback === true;
-  console.log('Using AB Test:', useAbTest); // Debug
-  const endpoint = `${this.getEndpoint(useAbTest ? 'chat-ab-test' : 'chat-stream')}`;
-  console.log('Selected endpoint:', endpoint); // Debug
+    console.log('Chat request:', request);
+    const useHumanFeedback = request.humanFeedback === true;
+    console.log('Using Human Feedback:', useHumanFeedback);
+    const endpoint = `${this.getEndpoint(useHumanFeedback ? 'chat-human-feedback' : 'chat-stream')}`;
+    console.log('Selected endpoint:', endpoint);
 
   const chatRequest = mapToChatRequest(request);
   const requestBody = JSON.stringify(chatRequest);
@@ -306,7 +306,7 @@ export class CohereClient {
     return this.cohereService.snapshot.deleteSnapshotV1SnapshotsSnapshotIdDelete({ snapshotId });
   }
 
-  private getEndpoint(endpoint: 'chat-stream' | 'google/auth' | 'oidc/auth' | 'chat-ab-test') {
+  private getEndpoint(endpoint: 'chat-stream' | 'google/auth' | 'oidc/auth' | 'chat-human-feedback') {
     return `${this.hostname}/v1/${endpoint}`;
   }
 

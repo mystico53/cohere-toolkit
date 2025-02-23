@@ -46,8 +46,7 @@ export const useStreamChat = () => {
   const cohereClient = useCohereClient();
   const queryClient = useQueryClient();
   const { data: experimentalFeatures } = useExperimentalFeatures();
-  
-  console.log('Hello World from useStreamChat');
+
   
   useEffect(() => {
     console.log('Experimental features:', experimentalFeatures);
@@ -79,6 +78,7 @@ export const useStreamChat = () => {
   const chatMutation = useMutation<StreamEnd | undefined, CohereNetworkError, StreamingChatParams>({
     mutationFn: async (params: StreamingChatParams) => {
       try {
+
         queryClient.setQueryData<ConversationPublic[]>(
           ['conversations'],
           getUpdatedConversations(params.request.conversation_id ?? '', params.request.message)
@@ -91,8 +91,6 @@ export const useStreamChat = () => {
         const chatStreamParams = {
           request: {
             ...request,
-            // Set humanFeedback based on experimental features
-            humanFeedback: experimentalFeatures?.humanFeedback === true
           },
           headers,
           signal: abortControllerRef.current.signal,

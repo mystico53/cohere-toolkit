@@ -109,7 +109,7 @@ services:
       - 4001:4000
     develop:
       watch:
-        - action: sync+restart
+        - action: sync
           path: ./src/interfaces/coral_web
           target: /app
           ignore:

@@ -22,6 +22,8 @@ COPY .en[v] .env
 
 # Start Next.js in development mode based on the preferred package manager
 FROM base as dev
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
 CMD npm run dev
 
 
