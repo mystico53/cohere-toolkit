@@ -83,14 +83,22 @@ services:
     # network_mode: host
     networks:
       - proxynet
+    environment:
+      - PYTHONUNBUFFERED=1  # Ensures Python output is sent straight to terminal
+      - LOGGING_LEVEL=DEBUG  # Sets logging to DEBUG level
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     build:
-      target: ${BUILD_TARGET:-prod}
+      target: ${BUILD_TARGET:-dev}
       context: ./src/interfaces/assistants_web
       dockerfile: Dockerfile
-    # Set environment variables directly in the docker-compose file
     environment:
+      NODE_ENV: development
       API_HOSTNAME: http://backend:8000
       NEXT_PUBLIC_API_HOSTNAME: ${NEXT_PUBLIC_API_HOSTNAME}
       NEXT_PUBLIC_FRONTEND_HOSTNAME: ${NEXT_PUBLIC_FRONTEND_HOSTNAME}
@@ -103,11 +111,35 @@ services:
       - 4000:4000
     develop:
       watch:
-        - action: sync
+        - action: sync+restart
           path: ./src/interfaces/assistants_web
           target: /app
           ignore:
             - node_modules/
+
+  frontend-coral:  
+    build:
+      target: ${BUILD_TARGET:-dev}
+      context: ./src/interfaces/coral_web
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: development
+      API_HOSTNAME: http://backend:8000
+      NEXT_PUBLIC_API_HOSTNAME: ${NEXT_PUBLIC_API_HOSTNAME}
+      NEXT_PUBLIC_FRONTEND_HOSTNAME: ${NEXT_PUBLIC_FRONTEND_HOSTNAME}
+    restart: always
+    networks:
+      - proxynet
+    ports:
+      - 4001:4000
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./src/interfaces/coral_web
+          target: /app
+          ignore:
+            - node_modules/
+    
 
   terrarium:
     image: ghcr.io/cohere-ai/terrarium:latest

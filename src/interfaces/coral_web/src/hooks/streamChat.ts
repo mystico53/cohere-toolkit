@@ -46,6 +46,12 @@ export const useStreamChat = () => {
   const cohereClient = useCohereClient();
   const queryClient = useQueryClient();
   const { data: experimentalFeatures } = useExperimentalFeatures();
+  
+  console.log('Hello World from useStreamChat');
+  
+  useEffect(() => {
+    console.log('Experimental features:', experimentalFeatures);
+  }, [experimentalFeatures]);
 
   useEffect(() => {
     return () => {
@@ -83,7 +89,11 @@ export const useStreamChat = () => {
         const { request, headers, onRead, onError, onFinish } = params;
 
         const chatStreamParams = {
-          request,
+          request: {
+            ...request,
+            // Set humanFeedback based on experimental features
+            humanFeedback: experimentalFeatures?.humanFeedback === true
+          },
           headers,
           signal: abortControllerRef.current.signal,
           onMessage: (event: EventSourceMessage) => {
@@ -120,7 +130,11 @@ export const useStreamChat = () => {
             onFinish();
           },
         };
-
+        console.log('Chat Parameters:', {
+          humanFeedback: experimentalFeatures?.humanFeedback,
+          endpoint: chatStreamParams.request.humanFeedback ? 'chat-ab-test' : 'chat-stream',
+          experimentalFeatures
+        });
         await cohereClient.chat({ ...chatStreamParams });
       } catch (e) {
         if (isUnauthorizedError(e)) {

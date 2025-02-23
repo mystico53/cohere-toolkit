@@ -90,14 +90,16 @@ export class CohereClient {
     onClose?: FetchEventSourceInit['onclose'];
     onError?: FetchEventSourceInit['onerror'];
   }) {
-    const chatRequest = mapToChatRequest(request);
-  const endpoint = `${this.getEndpoint(request.humanFeedback ? 'chat-ab-test' : 'chat-stream')}`;
-  
-  const requestBody = JSON.stringify({
-    ...chatRequest,
-    ...(request.humanFeedback ? { ab_test: true } : {})
-  });
-  
+  console.log('Chat request:', request); // Debug
+  const useAbTest = request.humanFeedback === true;
+  console.log('Using AB Test:', useAbTest); // Debug
+  const endpoint = `${this.getEndpoint(useAbTest ? 'chat-ab-test' : 'chat-stream')}`;
+  console.log('Selected endpoint:', endpoint); // Debug
+
+  const chatRequest = mapToChatRequest(request);
+  const requestBody = JSON.stringify(chatRequest);
+
+  console.debug(`Using endpoint: ${endpoint}`);
     return await fetchEventSource(endpoint, {
       method: 'POST',
       headers: { ...this.getHeaders(), ...headers },

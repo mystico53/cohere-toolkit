@@ -3,6 +3,8 @@
 import { Transition, TransitionChild } from '@headlessui/react';
 import React, { useCallback, useEffect, useRef } from 'react';
 
+console.log('[DEBUG] Conversation Component wird geladen');
+
 import { UpdateAgent } from '@/components/Agents/UpdateAgent';
 import { Composer } from '@/components/Conversation/Composer';
 import { Header } from '@/components/Conversation/Header';
@@ -42,6 +44,13 @@ const Conversation: React.FC<Props> = ({
   agentId,
   startOptionsEnabled = false,
 }) => {
+  console.log('[DEBUG] Conversation Component Render:', {
+    conversationId,
+    agentId,
+    startOptionsEnabled,
+    zeit: new Date().toISOString()
+  });
+  
   const chatHotKeys = useChatHotKeys();
 
   const { uploadFiles } = useFileActions();

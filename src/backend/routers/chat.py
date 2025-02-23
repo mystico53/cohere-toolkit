@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, Generator
 
 from fastapi import APIRouter, Depends
@@ -22,6 +23,9 @@ from backend.services.chat import (
 from backend.services.context import get_context
 from backend.services.request_validators import validate_deployment_header
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 router = APIRouter(
     prefix="/v1",
     tags=[RouterName.CHAT],
@@ -38,6 +42,8 @@ async def chat_stream(
     """
     Stream chat endpoint to handle user messages and return chatbot responses.
     """
+
+    logger.debug(f"Request model dump: {chat_request.model_dump()}")
     ctx.with_model(chat_request.model)
     agent_id = chat_request.agent_id
     ctx.with_agent_id(agent_id)
@@ -52,6 +58,7 @@ async def chat_stream(
         ctx,
     ) = process_chat(session, chat_request, ctx)
 
+    logger.info(f"Calling CustomChat().chat with request: {chat_request.model_dump()}")
     return EventSourceResponse(
         generate_chat_stream(
             session,
