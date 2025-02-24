@@ -100,7 +100,8 @@ export type BotMessage =
   | TypingMessage
   | FulfilledMessage
   | ErrorMessage
-  | AbortedMessage;
+  | AbortedMessage
+  | ParallelMessage;
 
 export type StreamingMessage = FulfilledMessage | TypingMessage | LoadingMessage;
 
@@ -165,4 +166,27 @@ export const createLoadingMessage = (
     type: MessageType.BOT,
     state: BotState.LOADING,
   };
+};
+
+export interface ParallelResponse {
+  id: string;
+  text: string;
+  state: BotState;
+}
+
+export interface ParallelMessage extends BaseMessage {
+  type: MessageType.BOT;
+  state: BotState.FULFILLED;
+  isParallel: true;
+  parallelResponses: ParallelResponse[];
+  text: string; 
+}
+
+export const isParallelMessage = (message: ChatMessage): message is ChatMessage & {
+  isParallel: true;
+  parallelResponses: ParallelResponse[];
+} => {
+  return message.type === MessageType.BOT && 
+         message.isParallel === true && 
+         'parallelResponses' in message;
 };

@@ -15,8 +15,9 @@ import { MESSAGE_LIST_CONTAINER_ID, useCalculateCitationStyles } from '@/hooks/c
 import { useFixCopyBug } from '@/hooks/fixCopyBug';
 import { useAgentsStore, useCitationsStore } from '@/stores';
 import { usePersistedStore } from '@/stores/persistedStore';
-import { ChatMessage, MessageType, StreamingMessage, isFulfilledMessage } from '@/types/message';
+import { BotState, ChatMessage, MessageType, StreamingMessage, isFulfilledMessage } from '@/types/message';
 import { cn } from '@/utils';
+
 
 type Props = {
   isStreaming: boolean;
@@ -261,7 +262,9 @@ const ParallelMessages = forwardRef<HTMLDivElement, ParallelMessagesProps>(funct
   { onRetry, messages, streamingMessage1, streamingMessage2, agentId, isStreamingToolEvents },
   ref
 ) {
-  
+  useEffect(() => {
+    console.log("[DEBUG] Messages in ParallelMessages:", messages);
+  }, [messages]);
   const isChatEmpty = messages.length === 0;
 
   if (isChatEmpty) {
@@ -277,6 +280,44 @@ const ParallelMessages = forwardRef<HTMLDivElement, ParallelMessagesProps>(funct
       <div className="mt-auto flex flex-col gap-y-4 md:gap-y-6">
         {messages.map((m, i) => {
           const isLastInList = i === messages.length - 1;
+          
+          // Handle parallel message rendering for saved messages
+          if (m.isParallel && m.parallelResponses) {
+            return (
+              <div key={i} className="grid grid-cols-2 gap-4 border-t border-marble-950 pt-4 mt-4">
+                <div className="flex flex-col">
+                  <div className="text-sm text-marble-400 mb-2">Response 1</div>
+                  <MessageRow
+                    isLast={false}
+                    isStreamingToolEvents={false}
+                    message={{
+                      type: MessageType.BOT,
+                      state: m.parallelResponses[0].state || BotState.FULFILLED,
+                      text: m.parallelResponses[0].text || "",
+                      isParallel: true
+                    }}
+                    onRetry={onRetry}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <div className="text-sm text-marble-400 mb-2">Response 2</div>
+                  <MessageRow
+                    isLast={false}
+                    isStreamingToolEvents={false}
+                    message={{
+                      type: MessageType.BOT,
+                      state: m.parallelResponses[1].state || BotState.FULFILLED,
+                      text: m.parallelResponses[1].text || "",
+                      isParallel: true
+                    }}
+                    onRetry={onRetry}
+                  />
+                </div>
+              </div>
+            );
+          }
+          
+          // Standard message rendering
           return (
             <MessageRow
               key={i}
@@ -289,10 +330,8 @@ const ParallelMessages = forwardRef<HTMLDivElement, ParallelMessagesProps>(funct
         })}
       </div>
 
-      
-
+      {/* Active streaming messages */}
       {(streamingMessage1 || streamingMessage2) && (
-       
         <div className="grid grid-cols-2 gap-4 border-t border-marble-950 pt-4 mt-4">
           <div className="flex flex-col">
             <div className="text-sm text-marble-400 mb-2">Response 1</div>

@@ -251,14 +251,14 @@ async def chat_human_feedback(
                 ctx=ctx,
             ),
             response_message,
-            should_store=should_store,  # Don't store for human feedback
+            should_store=should_store,
             next_message_position=next_message_position,
             ctx=ctx,
         ),
         media_type="text/event-stream",
         headers={
             "Connection": "keep-alive",
-            "X-Stream-ID": stream_id,  # Echo back the stream ID
+            "X-Stream-ID": stream_id,
         },
         send_timeout=300,
         ping=5,

@@ -600,8 +600,11 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
     setConversation({ messages: newMessages });
     setIsParallelStreaming(true);
     
+    // Track responses and states locally
     let botResponse1 = '';
     let botResponse2 = '';
+    let streamState1 = BotState.TYPING;
+    let streamState2 = BotState.TYPING;
     
     try {
       await parallelChatMutation.mutateAsync({
@@ -627,6 +630,8 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
               console.log('[DEBUG] Stream 1 complete with text:', eventData.data?.text);
               // If there's a final text in the stream-end event, use it
               const finalText = eventData.data?.text || botResponse1;
+              botResponse1 = finalText;
+              streamState1 = BotState.FULFILLED;
               
               setStreamingMessage1({
                 type: MessageType.BOT,
@@ -637,6 +642,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
             }
           } catch (e) {
             console.error('[DEBUG] Stream 1 error:', e);
+            streamState1 = BotState.ERROR;
             setStreamingMessage1(createErrorMessage({
               text: botResponse1,
               error: e.message || STRINGS.generationError,
@@ -645,6 +651,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
           }
         },
         onMessage2: (eventData: ChatResponseEvent) => {
+          // Same pattern as onMessage1 but with Stream 2 variables
           console.log('[DEBUG] Stream 2 raw event:', eventData);
           
           try {
@@ -662,8 +669,9 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
             }
             else if (eventData?.event === 'stream-end') {
               console.log('[DEBUG] Stream 2 complete with text:', eventData.data?.text);
-              // If there's a final text in the stream-end event, use it
               const finalText = eventData.data?.text || botResponse2;
+              botResponse2 = finalText;
+              streamState2 = BotState.FULFILLED;
               
               setStreamingMessage2({
                 type: MessageType.BOT,
@@ -674,6 +682,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
             }
           } catch (e) {
             console.error('[DEBUG] Stream 2 error:', e);
+            streamState2 = BotState.ERROR;
             setStreamingMessage2(createErrorMessage({
               text: botResponse2,
               error: e.message || STRINGS.generationError,
@@ -682,6 +691,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
           }
         },
         onError: (error) => {
+          // Your existing error handling
           console.error('[DEBUG] Parallel stream error:', error);
           setStreamingMessage1(createErrorMessage({
             text: botResponse1,
@@ -693,10 +703,53 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
             error: error.message || STRINGS.generationError,
             isParallel: true
           }));
+          setIsParallelStreaming(false);
         },
         onFinish: () => {
           console.log('[DEBUG] Parallel stream finished');
+          console.log('[DEBUG] Final response states:', { 
+            response1: { text: botResponse1, state: streamState1 },
+            response2: { text: botResponse2, state: streamState2 }
+          });
+          
           setIsParallelStreaming(false);
+          
+          // Create the parallel message using local variables instead of state
+          console.log('[DEBUG] Creating final parallel message');
+          
+          const finalMessage: ChatMessage = {
+            type: MessageType.BOT,
+            state: BotState.FULFILLED,
+            isParallel: true,
+            parallelResponses: [
+              {
+                id: "response1",
+                text: botResponse1,
+                state: streamState1
+              },
+              {
+                id: "response2",
+                text: botResponse2,
+                state: streamState2
+              }
+            ],
+            text: ""
+          };
+          
+          console.log('[DEBUG] Final message object:', finalMessage);
+          
+          // Update conversation
+          setConversation({ messages: [...newMessages, finalMessage] });
+          
+          // Reapply the update after a delay to handle any state resets
+          setTimeout(() => {
+            console.log('[DEBUG] Re-applying parallel message to ensure persistence');
+            setConversation({ messages: [...newMessages, finalMessage] });
+          }, 100);
+          
+          // Clear streaming state
+          setStreamingMessage1(null);
+          setStreamingMessage2(null);
         }
       });
     } catch (error) {
