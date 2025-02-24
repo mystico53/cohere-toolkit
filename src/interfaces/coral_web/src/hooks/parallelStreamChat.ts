@@ -1,4 +1,3 @@
-import { EventSourceMessage } from '@microsoft/fetch-event-source';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
@@ -46,34 +45,6 @@ const getUpdatedConversations = (
       updatedAt: new Date().toISOString(),
     };
   });
-};
-
-const parseEventData = (event: EventSourceMessage): ChatResponseEvent => {
-  if (!event.data) {
-    throw new Error('Empty event data');
-  }
-  
-  // Handle pre-parsed object data
-  if (typeof event.data === 'object') {
-    return event.data as ChatResponseEvent;
-  }
-  
-  // Parse string data
-  try {
-    const data = JSON.parse(event.data);
-    
-    // Handle stream end event
-    if (data?.event === StreamEvent.STREAM_END) {
-      const streamEndData = data.data as StreamEnd;
-      if (streamEndData.finish_reason !== FinishReason.COMPLETE) {
-        throw new Error(streamEndData.error || 'Stream ended unexpectedly');
-      }
-    }
-    
-    return data;
-  } catch (e) {
-    throw new Error(`Failed to parse event data: ${e instanceof Error ? e.message : 'unknown error'}`);
-  }
 };
 
 export const useParallelStreamChat = () => {
@@ -127,24 +98,40 @@ export const useParallelStreamChat = () => {
           request,
           headers,
           signal: abortControllerRef.current.signal,
-          onMessage1: (event: EventSourceMessage) => {
+          onMessage1: (data: ChatResponseEvent) => {
             try {
-              debug.log('stream1', 'Received message');
-              const data = parseEventData(event);
+              debug.log('stream1', 'Received message', data);
+              
+              // The data is already a ChatResponseEvent object, so we can use it directly
+              if (data?.event === StreamEvent.STREAM_END) {
+                const streamEndData = data.data as StreamEnd;
+                if (streamEndData.finish_reason !== FinishReason.COMPLETE) {
+                  throw new Error(streamEndData.error || 'Stream 1 ended unexpectedly');
+                }
+              }
+              
               onMessage1(data);
             } catch (e) {
-              const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
+              const errMsg = e instanceof Error ? e.message : 'unable to process event data';
               debug.error('stream1', e);
               onError(new Error(errMsg));
             }
           },
-          onMessage2: (event: EventSourceMessage) => {
+          onMessage2: (data: ChatResponseEvent) => {
             try {
-              debug.log('stream2', 'Received message');
-              const data = parseEventData(event);
+              debug.log('stream2', 'Received message', data);
+              
+              // The data is already a ChatResponseEvent object, so we can use it directly
+              if (data?.event === StreamEvent.STREAM_END) {
+                const streamEndData = data.data as StreamEnd;
+                if (streamEndData.finish_reason !== FinishReason.COMPLETE) {
+                  throw new Error(streamEndData.error || 'Stream 2 ended unexpectedly');
+                }
+              }
+              
               onMessage2(data);
             } catch (e) {
-              const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
+              const errMsg = e instanceof Error ? e.message : 'unable to process event data';
               debug.error('stream2', e);
               onError(new Error(errMsg));
             }

@@ -86,6 +86,8 @@ const Content: React.FC<Props> = (props) => {
 
   const humanFeedback = usePersistedStore(state => state.settings.humanFeedback);
 
+  
+
   useFixCopyBug();
   const [isAtBottom] = useSticky();
   const prevIsStreaming = usePrevious(isStreaming);
@@ -259,6 +261,7 @@ const ParallelMessages = forwardRef<HTMLDivElement, ParallelMessagesProps>(funct
   { onRetry, messages, streamingMessage1, streamingMessage2, agentId, isStreamingToolEvents },
   ref
 ) {
+  
   const isChatEmpty = messages.length === 0;
 
   if (isChatEmpty) {
@@ -286,7 +289,10 @@ const ParallelMessages = forwardRef<HTMLDivElement, ParallelMessagesProps>(funct
         })}
       </div>
 
+      
+
       {(streamingMessage1 || streamingMessage2) && (
+       
         <div className="grid grid-cols-2 gap-4 border-t border-marble-950 pt-4 mt-4">
           <div className="flex flex-col">
             <div className="text-sm text-marble-400 mb-2">Response 1</div>

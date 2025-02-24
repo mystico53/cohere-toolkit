@@ -54,3 +54,23 @@ export interface ChatResponseEvent {
     error?: string | null;
   };
 }
+
+export interface EventSourceMessage {
+  data: string;
+  event?: string | null;
+  id?: string | null;
+  retry?: number | null;
+}
+
+export interface FetchEventSourceInit {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  signal?: AbortSignal;
+  openWhenHidden?: boolean;
+  onopen?: (response: Response) => void | Promise<void>;
+  onmessage?: (event: EventSourceMessage) => void;
+  onclose?: () => void;
+  onerror?: (error: any) => void;
+}
+

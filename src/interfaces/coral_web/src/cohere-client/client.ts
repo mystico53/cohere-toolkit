@@ -1,4 +1,8 @@
-import { FetchEventSourceInit, fetchEventSource } from '@microsoft/fetch-event-source';
+import { 
+  EventSourceMessage, 
+  FetchEventSourceInit, 
+  fetchEventSource 
+} from '@microsoft/fetch-event-source';
 import { ChatResponseEvent } from './types';
 
 import {
@@ -344,24 +348,61 @@ export class CohereClient {
     
     let stream1Complete = false;
     let stream2Complete = false;
-
+  
     const checkCompletion = () => {
       if (stream1Complete && stream2Complete && onFinish) {
         onFinish();
       }
     };
-
+  
+    const formatEventData = (rawData: any): ChatResponseEvent => {
+      // Handle stream start event
+      if (rawData.generation_id && rawData.conversation_id && !rawData.text) {
+        return {
+          event: 'stream-start',
+          data: {
+            generation_id: rawData.generation_id,
+            conversation_id: rawData.conversation_id
+          }
+        };
+      }
+  
+      // Handle stream end event
+      if (rawData.finish_reason || rawData.message_id) {
+        return {
+          event: 'stream-end',
+          data: {
+            text: rawData.text,
+            generation_id: rawData.generation_id,
+            conversation_id: rawData.conversation_id,
+            finish_reason: rawData.finish_reason,
+            error: rawData.error
+          }
+        };
+      }
+  
+      // Handle text generation event
+      return {
+        event: 'text-generation',
+        data: {
+          text: rawData.text,
+          generation_id: rawData.generation_id,
+          conversation_id: rawData.conversation_id
+        }
+      };
+    };
+  
     // Create two different request bodies
     const request1 = {
       ...request,
       stream_metadata: { id: 'stream1' }
     };
-
+  
     const request2 = {
       ...request,
       stream_metadata: { id: 'stream2' }
     };
-
+  
     await Promise.all([
       // Stream 1
       fetchEventSource(endpoint, {
@@ -377,8 +418,11 @@ export class CohereClient {
         onmessage: (event: EventSourceMessage) => {
           try {
             if (!event.data) return;
-            const data = JSON.parse(event.data);
-            onMessage1(data);
+            const rawData = JSON.parse(event.data);
+            console.log('[DEBUG] RAW EVENT DATA:', event.data, event.parsedData);
+            const formattedData = formatEventData(rawData);
+            console.log('[Stream1] Formatted data:', formattedData);
+            onMessage1(formattedData);
           } catch (e) {
             const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
             onError1?.(new Error(errMsg));
@@ -390,7 +434,7 @@ export class CohereClient {
           checkCompletion();
         }
       }),
-
+  
       // Stream 2  
       fetchEventSource(endpoint, {
         method: 'POST',
@@ -405,8 +449,11 @@ export class CohereClient {
         onmessage: (event: EventSourceMessage) => {
           try {
             if (!event.data) return;
-            const data = JSON.parse(event.data);
-            onMessage2(data);
+            const rawData = JSON.parse(event.data);
+            console.log('[Stream2] Raw data:', rawData);
+            const formattedData = formatEventData(rawData);
+            console.log('[Stream2] Formatted data:', formattedData);
+            onMessage2(formattedData);
           } catch (e) {
             const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
             onError2?.(new Error(errMsg));

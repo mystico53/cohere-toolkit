@@ -596,6 +596,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
     request: CohereChatRequest;
     headers: Record<string, string>;
   }) => {
+    console.log('[DEBUG] Starting parallel stream');
     setConversation({ messages: newMessages });
     setIsParallelStreaming(true);
     
@@ -606,37 +607,51 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
       await parallelChatMutation.mutateAsync({
         request,
         headers,
-        onMessage1: (eventData: ChatResponseEvent) => {
-          console.log('Stream 1 message:', eventData);
-          switch (eventData.event) {
-            case StreamEvent.TEXT_GENERATION: {
-              const data = eventData.data as StreamTextGeneration;
-              botResponse1 += data?.text ?? '';
+        onMessage1: (eventData: any) => {
+          console.log('[DEBUG] Stream 1 raw event:', eventData);
+          
+          try {
+            // Since eventData is now passed directly
+            if (eventData?.event === 'text-generation' && eventData?.data?.text) {
+              const text = eventData.data.text;
+              botResponse1 += text;
+              console.log('[DEBUG] Stream 1 accumulated text:', botResponse1);
+              
               setStreamingMessage1({
                 type: MessageType.BOT,
                 state: BotState.TYPING,
                 text: botResponse1,
                 isParallel: true
               });
-              break;
             }
-            case StreamEvent.STREAM_END: {
+            else if (eventData?.event === 'stream-end') {
+              console.log('[DEBUG] Stream 1 complete');
               setStreamingMessage1({
                 type: MessageType.BOT,
                 state: BotState.FULFILLED,
                 text: botResponse1,
                 isParallel: true
               });
-              break;
             }
+          } catch (e) {
+            console.error('[DEBUG] Stream 1 error:', e);
+            setStreamingMessage1(createErrorMessage({
+              text: botResponse1,
+              error: e.message || STRINGS.generationError,
+              isParallel: true
+            }));
           }
         },
         onMessage2: (eventData: ChatResponseEvent) => {
-          console.log('Stream 2 message:', eventData);
-          switch (eventData.event) {
-            case StreamEvent.TEXT_GENERATION: {
-              const data = eventData.data as StreamTextGeneration;
-              botResponse2 += data?.text ?? '';
+          console.log('[DEBUG] Stream 2 raw event:', JSON.stringify(eventData));
+          
+          const event = eventData.event;
+          const data = eventData.data;
+          
+          switch (event) {
+            case 'text-generation': {
+              botResponse2 += data.text ?? '';
+              console.log('[DEBUG] Stream 2 current text:', botResponse2);
               setStreamingMessage2({
                 type: MessageType.BOT,
                 state: BotState.TYPING,
@@ -645,7 +660,8 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
               });
               break;
             }
-            case StreamEvent.STREAM_END: {
+            case 'stream-end': {
+              console.log('[DEBUG] Stream 2 complete:', botResponse2);
               setStreamingMessage2({
                 type: MessageType.BOT,
                 state: BotState.FULFILLED,
