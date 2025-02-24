@@ -251,7 +251,7 @@ async def chat_human_feedback(
                 ctx=ctx,
             ),
             response_message,
-            should_store=False,  # Don't store for human feedback
+            should_store=should_store,  # Don't store for human feedback
             next_message_position=next_message_position,
             ctx=ctx,
         ),

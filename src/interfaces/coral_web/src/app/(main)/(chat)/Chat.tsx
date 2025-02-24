@@ -13,6 +13,7 @@ import { useAgent } from '@/hooks/agents';
 import { useConversation } from '@/hooks/conversation';
 import { useListTools, useShowUnauthedToolsModal } from '@/hooks/tools';
 import { useCitationsStore, useConversationStore, useParamsStore } from '@/stores';
+import { usePersistedStore } from '@/stores/persistedStore'; 
 import { OutputFiles } from '@/stores/slices/citationsSlice';
 import { createStartEndKey, mapHistoryToMessages } from '@/utils';
 import { parsePythonInterpreterToolFields } from '@/utils/tools';
@@ -27,6 +28,7 @@ const Chat: React.FC<{ agentId?: string; conversationId?: string }> = ({
   const { setConversation } = useConversationStore();
   const { addCitation, resetCitations, saveOutputFiles } = useCitationsStore();
   const { setParams, resetFileParams } = useParamsStore();
+  const humanFeedback = usePersistedStore(state => state.settings.humanFeedback);
 
   const { open, close } = useContext(ModalContext);
 
@@ -124,7 +126,13 @@ const Chat: React.FC<{ agentId?: string; conversationId?: string }> = ({
   ) : isError ? (
     <ConversationError error={error} />
   ) : (
-    <Conversation conversationId={conversationId} agentId={agentId} startOptionsEnabled />
+    <Conversation 
+      conversationId={conversationId} 
+      agentId={agentId} 
+      startOptionsEnabled 
+      // Pass the feedback mode to control parallel streaming
+      humanFeedback={humanFeedback}
+    />
   );
 };
 

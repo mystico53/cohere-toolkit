@@ -607,6 +607,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
         request,
         headers,
         onMessage1: (eventData: ChatResponseEvent) => {
+          console.log('Stream 1 message:', eventData);
           switch (eventData.event) {
             case StreamEvent.TEXT_GENERATION: {
               const data = eventData.data as StreamTextGeneration;
@@ -631,6 +632,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
           }
         },
         onMessage2: (eventData: ChatResponseEvent) => {
+          console.log('Stream 2 message:', eventData);
           switch (eventData.event) {
             case StreamEvent.TEXT_GENERATION: {
               const data = eventData.data as StreamTextGeneration;

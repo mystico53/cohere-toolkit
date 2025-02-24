@@ -32,7 +32,7 @@ type Props = {
   startOptionsEnabled?: boolean;
   conversationId?: string;
   agentId?: string;
-  history?: ChatMessage[];
+  humanFeedback?: boolean;
 };
 
 /**
@@ -43,6 +43,7 @@ const Conversation: React.FC<Props> = ({
   conversationId,
   agentId,
   startOptionsEnabled = false,
+  humanFeedback = false,
 }) => {  
   const chatHotKeys = useChatHotKeys();
 
@@ -73,8 +74,11 @@ const Conversation: React.FC<Props> = ({
   const {
     userMessage,
     isStreaming,
+    isParallelStreaming,
     isStreamingToolEvents,
     streamingMessage,
+    streamingMessage1,
+    streamingMessage2,
     setUserMessage,
     handleSend: send,
     handleStop,
@@ -145,23 +149,30 @@ const Conversation: React.FC<Props> = ({
     <div className="flex h-full w-full">
       <div className="flex h-full w-full min-w-0 flex-col">
         <HotKeysProvider customHotKeys={chatHotKeys} />
-        <Header conversationId={conversationId} agentId={agentId} isStreaming={isStreaming} />
+        <Header 
+          conversationId={conversationId} 
+          agentId={agentId} 
+          isStreaming={isStreaming || isParallelStreaming} 
+        />
 
-        <div className="relative flex h-full w-full flex-col" ref={chatWindowRef}>
+<div className="relative flex h-full w-full flex-col" ref={chatWindowRef}>
           <MessagingContainer
             conversationId={conversationId}
             startOptionsEnabled={startOptionsEnabled}
             isStreaming={isStreaming}
+            isParallelStreaming={isParallelStreaming}
             isStreamingToolEvents={isStreamingToolEvents}
             onRetry={handleRetry}
             messages={messages}
             streamingMessage={streamingMessage}
+            streamingMessage1={streamingMessage1}
+            streamingMessage2={streamingMessage2}
             agentId={agentId}
             composer={
               <>
                 <WelcomeGuideTooltip step={3} className="absolute bottom-full mb-4" />
                 <Composer
-                  isStreaming={isStreaming}
+                  isStreaming={isStreaming || isParallelStreaming}
                   value={userMessage}
                   isFirstTurn={messages.length === 0}
                   streamingMessage={streamingMessage}
