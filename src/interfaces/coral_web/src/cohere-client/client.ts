@@ -356,40 +356,51 @@ export class CohereClient {
     };
   
     const formatEventData = (rawData: any): ChatResponseEvent => {
+      // Debug the incoming rawData
+      console.log('[DEBUG] Formatting raw data:', JSON.stringify(rawData));
+      
+      // Parse the data if it's a string (happens when raw JSON is received)
+      const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+      
       // Handle stream start event
-      if (rawData.generation_id && rawData.conversation_id && !rawData.text) {
+      if (data.event === 'stream-start') {
         return {
-          event: 'stream-start',
+          event: 'stream-start', 
           data: {
-            generation_id: rawData.generation_id,
-            conversation_id: rawData.conversation_id
+            generation_id: data.data?.generation_id,
+            conversation_id: data.data?.conversation_id
           }
         };
       }
-  
+      
+      // Handle text generation event
+      if (data.event === 'text-generation') {
+        return {
+          event: 'text-generation',
+          data: {
+            text: data.data?.text || '',
+            generation_id: data.data?.generation_id,
+            conversation_id: data.data?.conversation_id
+          }
+        };
+      }
+      
       // Handle stream end event
-      if (rawData.finish_reason || rawData.message_id) {
+      if (data.event === 'stream-end') {
         return {
           event: 'stream-end',
           data: {
-            text: rawData.text,
-            generation_id: rawData.generation_id,
-            conversation_id: rawData.conversation_id,
-            finish_reason: rawData.finish_reason,
-            error: rawData.error
+            text: data.data?.text || '',
+            generation_id: data.data?.generation_id,
+            conversation_id: data.data?.conversation_id,
+            finish_reason: data.data?.finish_reason,
+            error: data.data?.error
           }
         };
       }
-  
-      // Handle text generation event
-      return {
-        event: 'text-generation',
-        data: {
-          text: rawData.text,
-          generation_id: rawData.generation_id,
-          conversation_id: rawData.conversation_id
-        }
-      };
+      
+      // Default case - return the data as is
+      return data;
     };
   
     // Create two different request bodies
@@ -418,12 +429,15 @@ export class CohereClient {
         onmessage: (event: EventSourceMessage) => {
           try {
             if (!event.data) return;
+            console.log('[DEBUG] RAW EVENT DATA:', event.data);
+            
             const rawData = JSON.parse(event.data);
-            console.log('[DEBUG] RAW EVENT DATA:', event.data, event.parsedData);
             const formattedData = formatEventData(rawData);
             console.log('[Stream1] Formatted data:', formattedData);
+            
             onMessage1(formattedData);
           } catch (e) {
+            console.error('[Stream1] Error parsing event:', e);
             const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
             onError1?.(new Error(errMsg));
           }
@@ -449,12 +463,16 @@ export class CohereClient {
         onmessage: (event: EventSourceMessage) => {
           try {
             if (!event.data) return;
+            
             const rawData = JSON.parse(event.data);
             console.log('[Stream2] Raw data:', rawData);
+            
             const formattedData = formatEventData(rawData);
             console.log('[Stream2] Formatted data:', formattedData);
+            
             onMessage2(formattedData);
           } catch (e) {
+            console.error('[Stream2] Error parsing event:', e);
             const errMsg = e instanceof Error ? e.message : 'unable to parse event data';
             onError2?.(new Error(errMsg));
           }

@@ -607,13 +607,12 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
       await parallelChatMutation.mutateAsync({
         request,
         headers,
-        onMessage1: (eventData: any) => {
+        onMessage1: (eventData: ChatResponseEvent) => {
           console.log('[DEBUG] Stream 1 raw event:', eventData);
           
           try {
-            // Since eventData is now passed directly
-            if (eventData?.event === 'text-generation' && eventData?.data?.text) {
-              const text = eventData.data.text;
+            if (eventData?.event === 'text-generation') {
+              const text = eventData.data?.text || '';
               botResponse1 += text;
               console.log('[DEBUG] Stream 1 accumulated text:', botResponse1);
               
@@ -625,11 +624,14 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
               });
             }
             else if (eventData?.event === 'stream-end') {
-              console.log('[DEBUG] Stream 1 complete');
+              console.log('[DEBUG] Stream 1 complete with text:', eventData.data?.text);
+              // If there's a final text in the stream-end event, use it
+              const finalText = eventData.data?.text || botResponse1;
+              
               setStreamingMessage1({
                 type: MessageType.BOT,
                 state: BotState.FULFILLED,
-                text: botResponse1,
+                text: finalText,
                 isParallel: true
               });
             }
@@ -643,36 +645,44 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
           }
         },
         onMessage2: (eventData: ChatResponseEvent) => {
-          console.log('[DEBUG] Stream 2 raw event:', JSON.stringify(eventData));
+          console.log('[DEBUG] Stream 2 raw event:', eventData);
           
-          const event = eventData.event;
-          const data = eventData.data;
-          
-          switch (event) {
-            case 'text-generation': {
-              botResponse2 += data.text ?? '';
-              console.log('[DEBUG] Stream 2 current text:', botResponse2);
+          try {
+            if (eventData?.event === 'text-generation') {
+              const text = eventData.data?.text || '';
+              botResponse2 += text;
+              console.log('[DEBUG] Stream 2 accumulated text:', botResponse2);
+              
               setStreamingMessage2({
                 type: MessageType.BOT,
                 state: BotState.TYPING,
                 text: botResponse2,
                 isParallel: true
               });
-              break;
             }
-            case 'stream-end': {
-              console.log('[DEBUG] Stream 2 complete:', botResponse2);
+            else if (eventData?.event === 'stream-end') {
+              console.log('[DEBUG] Stream 2 complete with text:', eventData.data?.text);
+              // If there's a final text in the stream-end event, use it
+              const finalText = eventData.data?.text || botResponse2;
+              
               setStreamingMessage2({
                 type: MessageType.BOT,
                 state: BotState.FULFILLED,
-                text: botResponse2,
+                text: finalText,
                 isParallel: true
               });
-              break;
             }
+          } catch (e) {
+            console.error('[DEBUG] Stream 2 error:', e);
+            setStreamingMessage2(createErrorMessage({
+              text: botResponse2,
+              error: e.message || STRINGS.generationError,
+              isParallel: true
+            }));
           }
         },
         onError: (error) => {
+          console.error('[DEBUG] Parallel stream error:', error);
           setStreamingMessage1(createErrorMessage({
             text: botResponse1,
             error: error.message || STRINGS.generationError,
@@ -685,14 +695,15 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
           }));
         },
         onFinish: () => {
+          console.log('[DEBUG] Parallel stream finished');
           setIsParallelStreaming(false);
         }
       });
     } catch (error) {
+      console.error('[DEBUG] Error in parallel streaming:', error);
       setIsParallelStreaming(false);
       setStreamingMessage1(null);
       setStreamingMessage2(null);
-      console.error('Error in parallel streaming:', error);
     }
   };
 
