@@ -215,17 +215,6 @@ experimental_router = APIRouter(
 )
 
 
-from enum import Enum
-import uuid
-
-
-# Define the StreamEvent enum that your client expects
-class StreamEvent(Enum):
-    STREAM_START = "stream-start"
-    STREAM_DATA = "text-generation"
-    STREAM_END = "stream-end"
-
-
 @router.post("/chat-human-feedback")
 async def chat_human_feedback(
     chat_request: CohereChatRequest,
@@ -236,6 +225,12 @@ async def chat_human_feedback(
     """
     Streaming endpoint for chat with human feedback
     """
+    import uuid
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting human feedback chat with stream_id: {stream_id}")
+
     # Remove human_feedback from the request if it exists
     chat_data = chat_request.model_dump()
     if "human_feedback" in chat_data:
@@ -266,24 +261,64 @@ async def chat_human_feedback(
     ) = process_chat(session, chat_request, ctx)
 
     # Mark this message as part of a parallel group
+    logger.info(
+        f"Setting parallel attributes on response_message ID: {response_message.id}"
+    )
     response_message.is_parallel = True
     response_message.parallel_group_id = parallel_group_id
     response_message.parallel_variant = 1
 
-    # Commit the changes to the database
-    session.commit()
+    # Create a wrapper around the stream generator to set parallel attributes on the second response
+    async def parallel_stream_wrapper():
+        async for event in CustomChat().chat(
+            chat_request,
+            stream=True,
+            managed_tools=managed_tools,
+            session=session,
+            ctx=ctx,
+        ):
+            # Check if this is a STREAM_START event
+            if event.get("event_type") == StreamEvent.STREAM_START:
+                # This is the start of the second response
+                logger.info(
+                    f"Second response starting with generation_id: {event.get('generation_id')}"
+                )
 
-    # Return the regular event source response
+                # We need to create or update a message object for this response
+                # Create a new response message for the second variant
+                from uuid import uuid4
+
+                second_response_message = message_crud.create_message(
+                    session=session,
+                    message=Message(
+                        id=str(uuid4()),
+                        text="",  # Will be filled during streaming
+                        user_id=ctx.get_user_id(),
+                        conversation_id=ctx.get_conversation_id(),
+                        position=next_message_position
+                        + 1,  # Position after the first response
+                        agent=MessageAgent.CHATBOT,
+                        is_active=True,
+                        generation_id=event.get("generation_id"),
+                        is_parallel=True,  # Mark as parallel
+                        parallel_group_id=parallel_group_id,  # Same group ID
+                        parallel_variant=2,  # Second variant
+                    ),
+                )
+                logger.info(
+                    f"Created second response message: {second_response_message.id} with parallel attributes"
+                )
+
+                # Store the ID in the context to reference later
+                ctx.second_response_id = second_response_message.id
+
+            yield event
+
+    logger.info("Starting generate_chat_stream for parallel responses")
     return EventSourceResponse(
         generate_chat_stream(
             session,
-            CustomChat().chat(
-                chat_request,
-                stream=True,
-                managed_tools=managed_tools,
-                session=session,
-                ctx=ctx,
-            ),
+            parallel_stream_wrapper(),
             response_message,
             should_store=should_store,
             next_message_position=next_message_position,
