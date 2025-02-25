@@ -15,6 +15,7 @@ class MessageBase(ABC, BaseModel):
     """
     Abstract class for Message schemas
     """
+
     text: str = Field(
         ...,
         title="Text",
@@ -26,6 +27,7 @@ class Message(MessageBase):
     """
     Message Schema
     """
+
     id: str = Field(
         ...,
         title="ID",
@@ -91,6 +93,22 @@ class Message(MessageBase):
         description="Agent associated with the message",
     )
 
+    is_parallel: Optional[bool] = Field(
+        False,
+        title="Is Parallel Message",
+        description="Indicates if this message is part of a parallel response set",
+    )
+    parallel_group_id: Optional[str] = Field(
+        None,
+        title="Parallel Group ID",
+        description="ID that groups related parallel messages together",
+    )
+    parallel_variant: Optional[int] = Field(
+        None,
+        title="Parallel Variant",
+        description="Which variant in the parallel group (1 or 2)",
+    )
+
     class Config:
         from_attributes = True
 
@@ -99,6 +117,7 @@ class UpdateMessage(BaseModel):
     """
     Request to update a message
     """
+
     text: Optional[str] = Field(
         None,
         title="Text",

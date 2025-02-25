@@ -1,0 +1,3 @@
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_parallel BOOLEAN;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS parallel_group_id VARCHAR;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS parallel_variant VARCHAR;

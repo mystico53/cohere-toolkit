@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, AsyncGenerator, Dict, Generator, List, Union
 from uuid import uuid4
 
@@ -62,8 +63,11 @@ def generate_tools_preamble(chat_request: CohereChatRequest) -> str:
     ]
     tools_preamble = ""
     if full_managed_tools:
-        tools_preamble = " ".join(tool.implementation.TOOL_DEFAULT_PREAMBLE for tool in full_managed_tools if
-                                   tool.implementation.TOOL_DEFAULT_PREAMBLE)
+        tools_preamble = " ".join(
+            tool.implementation.TOOL_DEFAULT_PREAMBLE
+            for tool in full_managed_tools
+            if tool.implementation.TOOL_DEFAULT_PREAMBLE
+        )
     passed_preamble = ""
     if chat_request.preamble:
         passed_preamble = chat_request.preamble.replace("## Task And Context", "")
@@ -162,10 +166,7 @@ def process_chat(
 
     if should_store:
         attach_files_to_messages(
-            session,
-            user_id,
-            user_message.id,
-            chat_request.file_ids
+            session, user_id, user_message.id, chat_request.file_ids
         )
 
     chat_history = create_chat_history(
@@ -235,16 +236,13 @@ def process_message_regeneration(
     if not conversation:
         raise HTTPException(
             status_code=404,
-            detail=f"Conversation with ID: {conversation_id} not found."
+            detail=f"Conversation with ID: {conversation_id} not found.",
         )
 
     last_user_message = get_last_message(conversation, user_id, MessageAgent.USER)
 
     attach_files_to_messages(
-        session,
-        user_id,
-        last_user_message.id,
-        chat_request.file_ids
+        session, user_id, last_user_message.id, chat_request.file_ids
     )
 
     new_chatbot_message = create_message(
@@ -263,10 +261,10 @@ def process_message_regeneration(
         message.id
         for message in conversation.messages
         if (
-                message.is_active
-                and message.user_id == user_id
-                and message.position == last_user_message.position
-                and message.agent == MessageAgent.CHATBOT
+            message.is_active
+            and message.user_id == user_id
+            and message.position == last_user_message.position
+            and message.agent == MessageAgent.CHATBOT
         )
     ]
 
@@ -277,7 +275,14 @@ def process_message_regeneration(
     )
 
     managed_tools = (
-        len([tool.name for tool in chat_request.tools if tool.name in get_available_tools()]) > 0
+        len(
+            [
+                tool.name
+                for tool in chat_request.tools
+                if tool.name in get_available_tools()
+            ]
+        )
+        > 0
     )
 
     return (
@@ -286,7 +291,7 @@ def process_message_regeneration(
         new_chatbot_message,
         previous_chatbot_message_ids,
         managed_tools,
-        ctx
+        ctx,
     )
 
 
@@ -294,18 +299,18 @@ def get_last_message(
     conversation: Conversation, user_id: str, agent: MessageAgent
 ) -> Message:
     """
-       Retrieve the last message sent by a specific agent within a given conversation.
+    Retrieve the last message sent by a specific agent within a given conversation.
 
-       Args:
-           conversation (Conversation): The conversation containing the messages.
-           user_id (str): The user ID.
-           agent (MessageAgent): The agent whose last message is to be retrieved.
+    Args:
+        conversation (Conversation): The conversation containing the messages.
+        user_id (str): The user ID.
+        agent (MessageAgent): The agent whose last message is to be retrieved.
 
-       Returns:
-           Message: The last message sent by the agent.
+    Returns:
+        Message: The last message sent by the agent.
 
-       Raises:
-           HTTPException: If there are no messages from the specified agent in the conversation.
+    Raises:
+        HTTPException: If there are no messages from the specified agent in the conversation.
     """
     agent_messages = [
         message
@@ -517,8 +522,7 @@ def create_chat_history(
     text_messages = [
         message
         for message in conversation.messages
-        if message.position < user_message_position
-        and message.text
+        if message.position < user_message_position and message.text
     ]
     return [
         ChatMessage(
@@ -548,9 +552,23 @@ def update_conversation_after_turn(
         user_id (str): The user ID.
         previous_response_message_ids (list[str]): Previous response message IDs.
     """
+    # Add logging for parallel attributes
+    if hasattr(response_message, "is_parallel") and response_message.is_parallel:
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Processing parallel message in update_conversation_after_turn: "
+            f"is_parallel={response_message.is_parallel}, "
+            f"group_id={response_message.parallel_group_id}, "
+            f"variant={response_message.parallel_variant}"
+        )
+
+    # Update the text with final message text
+    response_message.text = final_message_text
+
     if previous_response_message_ids:
         message_crud.delete_messages(session, previous_response_message_ids, user_id)
 
+    # Create the message, ensuring parallel attributes are passed through
     message_crud.create_message(session, response_message)
 
     # Update conversation description with final message
@@ -741,7 +759,7 @@ async def generate_chat_stream(
             conversation_id,
             stream_end_data["text"],
             user_id,
-            kwargs.get("previous_response_message_ids")
+            kwargs.get("previous_response_message_ids"),
         )
 
 
@@ -802,6 +820,13 @@ def handle_stream_start(
     stream_event = StreamStart.model_validate(event)
     if response_message:
         response_message.generation_id = event["generation_id"]
+
+        if hasattr(response_message, "is_parallel") and response_message.is_parallel:
+            logging.getLogger(__name__).info(
+                f"Stream start with parallel message: group_id={response_message.parallel_group_id}, "
+                f"variant={response_message.parallel_variant}, generation_id={event['generation_id']}"
+            )
+
     stream_end_data["generation_id"] = event["generation_id"]
     return stream_event, stream_end_data, response_message, document_ids_to_document
 
@@ -987,12 +1012,19 @@ def handle_stream_end(
         response_message.citations = stream_end_data["citations"]
         response_message.text = stream_end_data["text"]
 
+        if hasattr(response_message, "is_parallel") and response_message.is_parallel:
+            logging.getLogger(__name__).info(
+                f"Stream end with parallel message: group_id={response_message.parallel_group_id}, "
+                f"variant={response_message.parallel_variant}, text_length={len(stream_end_data['text'])}"
+            )
+
     stream_end_data["chat_history"] = (
         to_dict(event).get("response", {}).get("chat_history", [])
     )
     stream_end = StreamEnd.model_validate(event | stream_end_data)
     stream_event = stream_end
     return stream_event, stream_end_data, response_message, document_ids_to_document
+
 
 def are_previous_actions_similar(
     distances: List[float], threshold: float, lookback: int

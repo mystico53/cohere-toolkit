@@ -16,6 +16,7 @@ import { useChatRoutes, useNavigateToNewChat } from '@/hooks/chatRoutes';
 import { useNotify } from '@/hooks/toast';
 import { useConversationStore } from '@/stores';
 import { isAbortError } from '@/utils';
+import { mapHistoryToMessages } from '@/utils/conversation';
 
 export const useConversations = (params: { offset?: number; limit?: number; agentId?: string }) => {
   const client = useCohereClient();
@@ -45,16 +46,31 @@ export const useConversation = ({
   disabledOnMount?: boolean;
 }): UseQueryResult<ConversationPublic | undefined> => {
   const client = useCohereClient();
+  const { setConversation } = useConversationStore();
 
   return useQuery<ConversationPublic | undefined, Error>({
     queryKey: ['conversation', conversationId],
-    enabled: !!conversationId && !disabledOnMount,
     queryFn: async () => {
       try {
         if (!conversationId) throw new Error(STRINGS.conversationIDNotFoundError);
-        return await client.getConversation({
+        const conversation = await client.getConversation({
           conversationId: conversationId,
         });
+        console.log('[DEBUG] API returned conversation:', JSON.stringify(conversation, null, 2));
+        
+        // Process messages to handle parallel messages
+        if (conversation.messages) {
+          const processedMessages = mapHistoryToMessages(conversation.messages);
+          
+          // Update the conversation store with processed messages
+          setConversation({
+            id: conversation.id,
+            name: conversation.title,
+            messages: processedMessages
+          });
+        }
+        
+        return conversation;
       } catch (e) {
         if (!isAbortError(e)) {
           console.error(e);
@@ -64,6 +80,7 @@ export const useConversation = ({
     },
     retry: 0,
     refetchOnWindowFocus: false,
+    enabled: !disabledOnMount && !!conversationId,
   });
 };
 

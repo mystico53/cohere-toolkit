@@ -190,3 +190,4 @@ export const isParallelMessage = (message: ChatMessage): message is ChatMessage 
          message.isParallel === true && 
          'parallelResponses' in message;
 };
+

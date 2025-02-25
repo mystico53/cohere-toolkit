@@ -36,6 +36,15 @@ class Context(BaseModel):
     organization: Optional[Organization] = None
     use_global_filtering: Optional[bool] = False
 
+    _parallel_group_id: Optional[str] = None
+
+    def with_parallel_group(self, parallel_group_id: str):
+        self._parallel_group_id = parallel_group_id
+        return self
+
+    def get_parallel_group_id(self) -> Optional[str]:
+        return self._parallel_group_id
+
     def __init__(self):
         super().__init__()
         self.with_logger()

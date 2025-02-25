@@ -1,5 +1,8 @@
+import asyncio
 import logging
-from typing import Any, Dict, Generator
+import uuid
+from enum import Enum
+from typing import Any, AsyncGenerator, Dict, Generator
 
 from fastapi import APIRouter, Depends, Header
 from sse_starlette.sse import EventSourceResponse
@@ -7,12 +10,15 @@ from sse_starlette.sse import EventSourceResponse
 from backend.chat.custom.custom import CustomChat
 from backend.config.routers import RouterName
 from backend.crud import agent_tool_metadata as agent_tool_metadata_crud
+from backend.crud import message as message_crud
 from backend.database_models.database import DBSessionDep
+from backend.database_models.message import MessageAgent
 from backend.model_deployments.cohere_platform import CohereDeployment
 from backend.schemas.agent import Agent, AgentToolMetadata
 from backend.schemas.chat import ChatResponseEvent, NonStreamedChatResponse
 from backend.schemas.cohere_chat import CohereChatRequest
 from backend.schemas.context import Context
+from backend.schemas.message import Message
 from backend.services.agent import validate_agent_exists
 from backend.services.chat import (
     generate_chat_response,
@@ -31,6 +37,12 @@ router = APIRouter(
     tags=[RouterName.CHAT],
 )
 router.name = RouterName.CHAT
+
+
+class StreamEvent(Enum):
+    STREAM_START = "stream-start"
+    STREAM_DATA = "stream-data"
+    STREAM_END = "stream-end"
 
 
 @router.post("/chat-stream", dependencies=[Depends(validate_deployment_header)])
@@ -203,14 +215,23 @@ experimental_router = APIRouter(
 )
 
 
+from enum import Enum
+import uuid
+
+
+# Define the StreamEvent enum that your client expects
+class StreamEvent(Enum):
+    STREAM_START = "stream-start"
+    STREAM_DATA = "text-generation"
+    STREAM_END = "stream-end"
+
+
 @router.post("/chat-human-feedback")
 async def chat_human_feedback(
     chat_request: CohereChatRequest,
     session: DBSessionDep,
     ctx: Context = Depends(get_context),
-    stream_id: str | None = Header(
-        default=None
-    ),  # Add this to get stream ID from header
+    stream_id: str | None = Header(default=None),
 ) -> EventSourceResponse:
     """
     Streaming endpoint for chat with human feedback
@@ -226,6 +247,10 @@ async def chat_human_feedback(
     # Add stream identification to context
     ctx.with_stream_id(stream_id)
 
+    # Generate a unique parallel group ID for this pair of responses
+    parallel_group_id = str(uuid.uuid4())
+    logger.info(f"Created parallel group ID: {parallel_group_id}")
+
     if not chat_request.model:
         chat_request.model = "c4ai-aya-expanse-32b"
 
@@ -240,6 +265,15 @@ async def chat_human_feedback(
         ctx,
     ) = process_chat(session, chat_request, ctx)
 
+    # Mark this message as part of a parallel group
+    response_message.is_parallel = True
+    response_message.parallel_group_id = parallel_group_id
+    response_message.parallel_variant = 1
+
+    # Commit the changes to the database
+    session.commit()
+
+    # Return the regular event source response
     return EventSourceResponse(
         generate_chat_stream(
             session,

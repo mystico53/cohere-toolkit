@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Index,
+    Integer,
     String,
     UniqueConstraint,
 )
@@ -67,6 +68,10 @@ class Message(Base):
     agent: Mapped[MessageAgent] = mapped_column(
         Enum(MessageAgent, native_enum=False),
     )
+
+    is_parallel: Mapped[bool] = mapped_column(Boolean, default=False)
+    parallel_group_id: Mapped[str] = mapped_column(String, nullable=True)
+    parallel_variant: Mapped[int] = mapped_column(Integer, nullable=True)
 
     @property
     def file_ids(self):

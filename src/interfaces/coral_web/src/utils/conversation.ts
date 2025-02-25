@@ -1,7 +1,21 @@
 import { Message, MessageAgent } from '@/cohere-client';
-import { BotState, ChatMessage, FulfilledMessage, MessageType, UserMessage } from '@/types/message';
+import { 
+  BotState, 
+  ChatMessage, 
+  FulfilledMessage, 
+  MessageType, 
+  ParallelMessage,
+  ParallelResponse,
+  UserMessage 
+} from '@/types/message';
 import { replaceTextWithCitations } from '@/utils/citations';
 import { replaceCodeBlockWithIframe } from '@/utils/preview';
+
+interface ParallelApiMessage extends Message {
+  is_parallel?: boolean;
+  parallel_group_id?: string;
+  parallel_variant?: number;
+}
 
 /**
  * A utility function that checks if the conversation title should be updated
@@ -32,16 +46,39 @@ export type UserOrBotMessage = UserMessage | FulfilledMessage;
 /**
  * @description Maps chat history given by the API to a list of messages that can be displayed in the chat.
  */
-export const mapHistoryToMessages = (history?: Message[]): UserOrBotMessage[] => {
+export const mapHistoryToMessages = (history?: Message[]): ChatMessage[] => {
   if (!history) return [];
 
-  let messages: UserOrBotMessage[] = [];
+  // Cast history to our extended type that includes parallel message properties
+  const extendedHistory = history as ParallelApiMessage[];
+  
+  let result: ChatMessage[] = [];
   let tempToolEvents: FulfilledMessage['toolEvents'];
-
-  for (const message of history) {
+  
+  // Process parallel messages first
+  const parallelGroupsMap: Record<string, ParallelApiMessage[]> = {};
+  
+  // First pass: collect all parallel messages
+  for (const message of extendedHistory) {
+    if (message.is_parallel && message.parallel_group_id) {
+      if (!parallelGroupsMap[message.parallel_group_id]) {
+        parallelGroupsMap[message.parallel_group_id] = [];
+      }
+      parallelGroupsMap[message.parallel_group_id].push(message);
+    }
+  }
+  
+  // Second pass: process regular messages, skipping those in parallel groups
+  for (const message of extendedHistory) {
+    // Skip messages that are part of parallel groups
+    if (message.is_parallel && message.parallel_group_id && 
+        parallelGroupsMap[message.parallel_group_id].length >= 2) {
+      continue;
+    }
+    
     if (message.agent === MessageAgent.CHATBOT) {
       if (!message.tool_plan) {
-        messages.push({
+        result.push({
           type: MessageType.BOT,
           state: BotState.FULFILLED,
           originalText: message.text ?? '',
@@ -56,7 +93,7 @@ export const mapHistoryToMessages = (history?: Message[]): UserOrBotMessage[] =>
         });
         tempToolEvents = undefined;
       } else {
-        // Historical tool events come in as chatbot messages before the actual final response message.
+        // Historical tool events code (unchanged)
         if (tempToolEvents) {
           tempToolEvents.push({
             text: message.tool_plan,
@@ -67,7 +104,7 @@ export const mapHistoryToMessages = (history?: Message[]): UserOrBotMessage[] =>
         }
       }
     } else {
-      messages.push({
+      result.push({
         type: MessageType.USER,
         text: replaceTextWithCitations(
           message.text ?? '',
@@ -78,6 +115,37 @@ export const mapHistoryToMessages = (history?: Message[]): UserOrBotMessage[] =>
       });
     }
   }
-
-  return messages;
+  
+  // Third pass: create parallel message objects for complete groups
+  Object.entries(parallelGroupsMap).forEach(([groupId, groupMsgs]) => {
+    if (groupMsgs.length >= 2) {
+      // Sort by variant number
+      groupMsgs.sort((a, b) => 
+        (a.parallel_variant || 0) - (b.parallel_variant || 0)
+      );
+      
+      const parallelResponses: ParallelResponse[] = groupMsgs.map((msg, idx) => ({
+        id: `response${idx+1}`,
+        text: replaceTextWithCitations(
+          replaceCodeBlockWithIframe(msg.text) ?? '',
+          msg.citations ?? [],
+          msg.generation_id ?? ''
+        ),
+        state: BotState.FULFILLED
+      }));
+      
+      // Create a parallel message
+      const parallelMessage: ParallelMessage = {
+        type: MessageType.BOT,
+        state: BotState.FULFILLED,
+        isParallel: true,
+        parallelResponses,
+        text: ''
+      };
+      
+      result.push(parallelMessage);
+    }
+  });
+  
+  return result;
 };
