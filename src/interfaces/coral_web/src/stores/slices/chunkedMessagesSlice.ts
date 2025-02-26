@@ -75,6 +75,7 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
       chunkedMessages: {
         ...INITIAL_STATE,
         isChunked: true,
+        currentChunkIndex: 0, // Explicitly reset to 0
       }
     });
   },
@@ -96,6 +97,7 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
       chunkedMessages: {
         ...state.chunkedMessages,
         isComplete: true,
+        currentChunkIndex: 0, // Reset to 0 when streams complete
       }
     }));
     
@@ -103,7 +105,7 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     get().createChunks();
   },
   
-  createChunks: (chunkSize = 100) => { // Default to 100 characters per chunk
+  createChunks: (chunkSize = 300) => { // Default to 300 characters per chunk
     set((state) => {
       const { stream1, stream2 } = state.chunkedMessages.responses;
       
@@ -114,11 +116,6 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
         for (let i = 0; i < text.length; i += size) {
           chunks.push(text.substring(i, Math.min(i + size, text.length)));
         }
-        
-        console.log('Created chunks:', {
-          stream1: chunks.map(c => c.length),
-          stream2: chunks.map(c => c.length),
-        });
         
         return chunks;
       };
