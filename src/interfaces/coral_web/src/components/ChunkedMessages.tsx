@@ -61,8 +61,13 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     
     // Get current chunks with safe access
     const currentIndex = chunkedMessages.currentChunkIndex || 0;
-    const currentChunk1 = chunkedMessages.chunks?.stream1?.[currentIndex] || '';
-    const currentChunk2 = chunkedMessages.chunks?.stream2?.[currentIndex] || '';
+    // Get all chunks up to and including the current index and join them
+    const accumulatedChunk1 = chunkedMessages.chunks?.stream1
+      ?.slice(0, currentIndex + 1)
+      .join('') || '';
+    const accumulatedChunk2 = chunkedMessages.chunks?.stream2
+      ?.slice(0, currentIndex + 1)
+      .join('') || '';
     
     // Calculate progress
     const totalChunks = chunkedMessages.chunks?.stream1?.length || 0;
@@ -112,7 +117,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
                 message={{
                   type: MessageType.BOT,
                   state: BotState.FULFILLED,
-                  text: currentChunk1,
+                  text: accumulatedChunk1,
                 }}
                 onRetry={onRetry}
               />
@@ -127,7 +132,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
                 message={{
                   type: MessageType.BOT,
                   state: BotState.FULFILLED,
-                  text: currentChunk2,
+                  text: accumulatedChunk2,
                 }}
                 onRetry={onRetry}
               />
