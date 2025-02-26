@@ -17,6 +17,7 @@ import { useAgentsStore, useCitationsStore } from '@/stores';
 import { usePersistedStore } from '@/stores/persistedStore';
 import { BotState, ChatMessage, MessageType, StreamingMessage, isFulfilledMessage } from '@/types/message';
 import { cn } from '@/utils';
+import ChunkedMessages from '@/components/ChunkedMessages';
 
 
 type Props = {
@@ -85,9 +86,8 @@ const Content: React.FC<Props> = (props) => {
     citations: { hasCitations },
   } = useCitationsStore();
 
+  const showChunkedMessages = usePersistedStore(state => state.settings.showChunkedMessages);
   const humanFeedback = usePersistedStore(state => state.settings.humanFeedback);
-
-  
 
   useFixCopyBug();
   const [isAtBottom] = useSticky();
@@ -133,7 +133,10 @@ const Content: React.FC<Props> = (props) => {
   return (
     <div className="flex h-max min-h-full w-full">
       <div id={MESSAGE_LIST_CONTAINER_ID} className={cn('flex h-auto min-w-0 flex-1 flex-col')}>
-        {humanFeedback ? (
+        {/* Updated conditional rendering */}
+        {showChunkedMessages ? (
+          <ChunkedMessages {...props} ref={messageContainerDivRef} />
+        ) : humanFeedback ? (
           <ParallelMessages {...props} ref={messageContainerDivRef} />
         ) : (
           <Messages {...props} ref={messageContainerDivRef} />
@@ -168,7 +171,7 @@ const Content: React.FC<Props> = (props) => {
       </div>
 
       {/* Only show citations panel in non-parallel mode */}
-      {!humanFeedback && (
+      {!humanFeedback && !showChunkedMessages && (
         <>
           <div
             className={cn('hidden h-auto border-marble-950', {

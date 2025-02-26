@@ -6,7 +6,6 @@ const Page: NextPage = () => {
   return (
     <>
       <Chat />
-      <ChunkedMessagesDebug />
     </>
   );
 };
