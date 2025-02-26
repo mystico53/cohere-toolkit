@@ -6,8 +6,9 @@ import { persist } from 'zustand/middleware';
 import { shallow } from 'zustand/shallow';
 
 import { SettingsStore, createSettingsSlice } from '@/stores/slices/settingsSlice';
+import { FeedbackTestingStore, createFeedbackTestingSlice } from './slices/feedbackTestingSlice';
 
-type PersistedStore = SettingsStore;
+type PersistedStore = SettingsStore & FeedbackTestingStore;
 
 const useEmptyPersistedStore = create<PersistedStore>((...a) => ({
   ...createSettingsSlice(...a),
@@ -17,6 +18,7 @@ export const usePersistedStore = create<PersistedStore>()(
   persist(
     (...a) => ({
       ...createSettingsSlice(...a),
+      ...createFeedbackTestingSlice(...a),
     }),
     {
       name: 'persisted-store',
@@ -52,6 +54,22 @@ export const useSettingsStore = () => {
       setIsConvListPanelOpen: state.setIsConvListPanelOpen,
       humanFeedback: state.settings.humanFeedback,
       setHumanFeedback: (value: boolean) => state.setSettings({ humanFeedback: value }),
+    }),
+    shallow
+  );
+};
+
+export const useFeedbackTestingStore = () => {
+  return usePersistedStoresWithHydration(
+    (state) => ({
+      feedbackTesting: state.feedbackTesting,
+      startFeedbackSession: state.startFeedbackSession,
+      updateStreamContent: state.updateStreamContent,
+      completeStreams: state.completeStreams,
+      createChunks: state.createChunks,
+      showNextChunk: state.showNextChunk,
+      resetFeedbackSession: state.resetFeedbackSession,
+      recordFeedback: state.recordFeedback,
     }),
     shallow
   );

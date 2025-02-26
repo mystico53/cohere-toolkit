@@ -356,8 +356,8 @@ export class CohereClient {
     };
   
     const formatEventData = (rawData: any): ChatResponseEvent => {
-      // Debug the incoming rawData
-      console.log('[DEBUG] Formatting raw data:', JSON.stringify(rawData));
+
+      // console.log('[DEBUG] Formatting raw data:', JSON.stringify(rawData));
       
       // Parse the data if it's a string (happens when raw JSON is received)
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
@@ -429,12 +429,8 @@ export class CohereClient {
         onmessage: (event: EventSourceMessage) => {
           try {
             if (!event.data) return;
-            console.log('[DEBUG] RAW EVENT DATA:', event.data);
-            
             const rawData = JSON.parse(event.data);
             const formattedData = formatEventData(rawData);
-            console.log('[Stream1] Formatted data:', formattedData);
-            
             onMessage1(formattedData);
           } catch (e) {
             console.error('[Stream1] Error parsing event:', e);
@@ -463,13 +459,9 @@ export class CohereClient {
         onmessage: (event: EventSourceMessage) => {
           try {
             if (!event.data) return;
-            
-            const rawData = JSON.parse(event.data);
-            console.log('[Stream2] Raw data:', rawData);
-            
+
+            const rawData = JSON.parse(event.data);   
             const formattedData = formatEventData(rawData);
-            console.log('[Stream2] Formatted data:', formattedData);
-            
             onMessage2(formattedData);
           } catch (e) {
             console.error('[Stream2] Error parsing event:', e);

@@ -6,6 +6,8 @@ const INITIAL_STATE: Required<State> = {
   isConvListPanelOpen: true,
   isMobileConvListPanelOpen: false,
   humanFeedback: true,
+  feedbackTestingEnabled: true,
+  
 };
 
 type State = {
@@ -14,12 +16,14 @@ type State = {
   isConvListPanelOpen: boolean;
   isMobileConvListPanelOpen: boolean;
   humanFeedback: boolean;
+  feedbackTestingEnabled: boolean;
 };
 
 type Actions = {
   setSettings: (settings: Partial<State>) => void;
   setIsConvListPanelOpen: (isOpen: boolean) => void;
   setHumanFeedback: (humanFeedback: boolean) => void;
+  setFeedbackTestingEnabled: (enabled: boolean) => void;
 };
 
 export type SettingsStore = {
@@ -41,6 +45,14 @@ export const createSettingsSlice: StateCreator<SettingsStore, [], [], SettingsSt
         ...state.settings,
         isConvListPanelOpen: isOpen,
         isMobileConvListPanelOpen: isOpen,
+      },
+    }));
+  },
+  setFeedbackTestingEnabled(enabled) {
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        feedbackTestingEnabled: enabled,
       },
     }));
   },

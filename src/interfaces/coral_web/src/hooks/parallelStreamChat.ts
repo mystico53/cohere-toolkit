@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
+import { useFeedbackTestingStore, useSettingsStore } from '@/stores/persistedStore';
 
 import {
   ChatResponseEvent,
@@ -12,6 +13,8 @@ import {
   isUnauthorizedError,
   useCohereClient,
 } from '@/cohere-client';
+
+
 
 const debug = {
   log: (context: string, message: string, data?: any) => {
@@ -51,6 +54,15 @@ export const useParallelStreamChat = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const cohereClient = useCohereClient();
   const queryClient = useQueryClient();
+  const { settings } = useSettingsStore();
+  
+  const { 
+    updateStreamContent, 
+    completeStreams
+  } = useFeedbackTestingStore();
+
+  const accumulatedText1 = useRef('');
+  const accumulatedText2 = useRef('');
 
   useEffect(() => {
     return () => {
@@ -80,8 +92,12 @@ export const useParallelStreamChat = () => {
   const parallelChatMutation = useMutation<StreamEnd | undefined, CohereNetworkError, ParallelStreamingParams>({
     mutationFn: async (params: ParallelStreamingParams) => {
       try {
-        debug.log('mutation', 'Starting parallel chat streams', { request: params.request });
         
+        // debug.log('mutation', 'Starting parallel chat streams', { request: params.request });
+        
+        accumulatedText1.current = '';
+        accumulatedText2.current = '';
+
         // Optimistic update
         if (params.request.conversation_id) {
           queryClient.setQueryData<ConversationPublic[]>(
@@ -100,13 +116,22 @@ export const useParallelStreamChat = () => {
           signal: abortControllerRef.current.signal,
           onMessage1: (data: ChatResponseEvent) => {
             try {
-              debug.log('stream1', 'Received message', data);
+              // debug.log('stream1', 'Received message', data);
               
               // The data is already a ChatResponseEvent object, so we can use it directly
               if (data?.event === StreamEvent.STREAM_END) {
                 const streamEndData = data.data as StreamEnd;
                 if (streamEndData.finish_reason !== FinishReason.COMPLETE) {
                   throw new Error(streamEndData.error || 'Stream 1 ended unexpectedly');
+                }
+              }
+
+              if (data?.event === StreamEvent.TEXT_GENERATION && 'text' in data.data) {
+                accumulatedText1.current += data.data.text || '';
+                
+                // Only store if in testing mode
+                if (settings.feedbackTestingEnabled) {
+                  updateStreamContent('stream1', accumulatedText1.current);
                 }
               }
               
@@ -119,13 +144,21 @@ export const useParallelStreamChat = () => {
           },
           onMessage2: (data: ChatResponseEvent) => {
             try {
-              debug.log('stream2', 'Received message', data);
+              // debug.log('stream2', 'Received message', data);
               
               // The data is already a ChatResponseEvent object, so we can use it directly
               if (data?.event === StreamEvent.STREAM_END) {
                 const streamEndData = data.data as StreamEnd;
                 if (streamEndData.finish_reason !== FinishReason.COMPLETE) {
                   throw new Error(streamEndData.error || 'Stream 2 ended unexpectedly');
+                }
+              }
+
+              if (data?.event === StreamEvent.STREAM_END && 'text' in data.data) {
+                accumulatedText2.current = data.data.text || accumulatedText2.current;
+                
+                if (settings.feedbackTestingEnabled) {
+                  updateStreamContent('stream2', accumulatedText2.current);
                 }
               }
               
@@ -146,6 +179,11 @@ export const useParallelStreamChat = () => {
           },
           onFinish: () => {
             debug.log('streams', 'Both streams finished');
+
+            if (settings.feedbackTestingEnabled) {
+              completeStreams();
+            }
+
             onFinish();
           }
         });

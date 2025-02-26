@@ -596,7 +596,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
     request: CohereChatRequest;
     headers: Record<string, string>;
   }) => {
-    console.log('[DEBUG] Starting parallel stream');
     setConversation({ messages: newMessages });
     setIsParallelStreaming(true);
     
@@ -611,13 +610,10 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
         request,
         headers,
         onMessage1: (eventData: ChatResponseEvent) => {
-          console.log('[DEBUG] Stream 1 raw event:', eventData);
-          
           try {
             if (eventData?.event === 'text-generation') {
               const text = eventData.data?.text || '';
               botResponse1 += text;
-              console.log('[DEBUG] Stream 1 accumulated text:', botResponse1);
               
               setStreamingMessage1({
                 type: MessageType.BOT,
@@ -627,8 +623,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
               });
             }
             else if (eventData?.event === 'stream-end') {
-              console.log('[DEBUG] Stream 1 complete with text:', eventData.data?.text);
-              // If there's a final text in the stream-end event, use it
               const finalText = eventData.data?.text || botResponse1;
               botResponse1 = finalText;
               streamState1 = BotState.FULFILLED;
@@ -641,7 +635,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
               });
             }
           } catch (e) {
-            console.error('[DEBUG] Stream 1 error:', e);
             streamState1 = BotState.ERROR;
             setStreamingMessage1(createErrorMessage({
               text: botResponse1,
@@ -650,15 +643,11 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
             }));
           }
         },
-        onMessage2: (eventData: ChatResponseEvent) => {
-          // Same pattern as onMessage1 but with Stream 2 variables
-          console.log('[DEBUG] Stream 2 raw event:', eventData);
-          
+        onMessage2: (eventData: ChatResponseEvent) => {          
           try {
             if (eventData?.event === 'text-generation') {
               const text = eventData.data?.text || '';
               botResponse2 += text;
-              console.log('[DEBUG] Stream 2 accumulated text:', botResponse2);
               
               setStreamingMessage2({
                 type: MessageType.BOT,
@@ -668,7 +657,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
               });
             }
             else if (eventData?.event === 'stream-end') {
-              console.log('[DEBUG] Stream 2 complete with text:', eventData.data?.text);
               const finalText = eventData.data?.text || botResponse2;
               botResponse2 = finalText;
               streamState2 = BotState.FULFILLED;
@@ -691,7 +679,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
           }
         },
         onError: (error) => {
-          // Your existing error handling
           console.error('[DEBUG] Parallel stream error:', error);
           setStreamingMessage1(createErrorMessage({
             text: botResponse1,
@@ -707,14 +694,8 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
         },
         onFinish: () => {
           console.log('[DEBUG] Parallel stream finished');
-          console.log('[DEBUG] Final response states:', { 
-            response1: { text: botResponse1, state: streamState1 },
-            response2: { text: botResponse2, state: streamState2 }
-          });
           
           setIsParallelStreaming(false);
-          
-          // Create the parallel message using local variables instead of state
           console.log('[DEBUG] Creating final parallel message');
           
           const finalMessage: ChatMessage = {
@@ -743,7 +724,7 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
           
           // Reapply the update after a delay to handle any state resets
           setTimeout(() => {
-            console.log('[DEBUG] Re-applying parallel message to ensure persistence');
+
             setConversation({ messages: [...newMessages, finalMessage] });
           }, 100);
           
@@ -764,12 +745,12 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
     const latestMessage = messages[messages.length - 1];
 
     if (latestMessage.type === MessageType.USER) {
-      // Remove last message (user message)
+    
       const latestMessageRemoved = messages.slice(0, -1);
       const latestUserMessage = latestMessage.text;
       handleChat({ suggestedMessage: latestUserMessage, currentMessages: latestMessageRemoved });
     } else if (latestMessage.type === MessageType.BOT) {
-      // Remove last messages (bot aborted message and user message)
+      
       const latestMessagesRemoved = messages.slice(0, -2);
       const latestUserMessage = messages[messages.length - 2].text;
       handleChat({ suggestedMessage: latestUserMessage, currentMessages: latestMessagesRemoved });

@@ -98,11 +98,7 @@ const ParallelMessages = forwardRef<HTMLDivElement, ParallelMessagesProps>(funct
       }
     });
     
-    console.log('[DEBUG] Processed messages:', {
-      userMessagesCount: processed.userMessages.length,
-      parallelGroupsCount: processed.parallelGroups.length,
-      regularMessagesCount: processed.regularMessages.length
-    });
+
     
     return processed;
   }, [messages]);

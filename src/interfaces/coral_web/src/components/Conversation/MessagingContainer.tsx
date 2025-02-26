@@ -264,18 +264,18 @@ const ParallelMessages = forwardRef<HTMLDivElement, ParallelMessagesProps>(funct
 ) {
   useEffect(() => {
     // Add more detailed debugging
-    console.log("[DEBUG] Parallel Messages State:", {
-      totalMessages: messages.length,
-      parallelMessages: messages.filter(m => m.isParallel),
-      streamingMessage1: streamingMessage1 ? {
-        state: streamingMessage1.state,
-        hasText: !!streamingMessage1.text
-      } : null,
-      streamingMessage2: streamingMessage2 ? {
-        state: streamingMessage2.state,
-        hasText: !!streamingMessage2.text
-      } : null
-    });
+    // console.log("[DEBUG] Parallel Messages State:", {
+    //   totalMessages: messages.length,
+    //   parallelMessages: messages.filter(m => m.isParallel),
+    //   streamingMessage1: streamingMessage1 ? {
+    //     state: streamingMessage1.state,
+    //     hasText: !!streamingMessage1.text
+    //   } : null,
+    //   streamingMessage2: streamingMessage2 ? {
+    //     state: streamingMessage2.state,
+    //     hasText: !!streamingMessage2.text
+    //   } : null
+    // });
   }, [messages, streamingMessage1, streamingMessage2]);
   const isChatEmpty = messages.length === 0;
 
