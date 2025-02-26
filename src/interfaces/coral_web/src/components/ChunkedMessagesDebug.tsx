@@ -8,7 +8,7 @@ import { usechunkedMessagesStore } from '@/stores/persistedStore';
  */
 const ChunkedMessagesDebug: React.FC = () => {
   const { chunkedMessages } = usechunkedMessagesStore();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   // Toggle expanded state
   const toggleExpanded = () => setExpanded(!expanded);
@@ -22,139 +22,102 @@ const ChunkedMessagesDebug: React.FC = () => {
 
   if (!chunkedMessages) {
     return (
-      <div 
-        style={{
-          position: 'fixed',
-          bottom: '10px',
-          right: '10px',
-          width: '180px',
-          padding: '8px 12px',
-          backgroundColor: '#282c34',
-          color: '#abb2bf',
-          borderRadius: '6px',
-          fontFamily: 'monospace',
-          fontSize: '12px',
-          zIndex: 9999,
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
-        }}
-      >
-        Loading store data...
+      <div className="my-4 p-4 bg-gray-800 text-gray-300 rounded-md">
+        <p>Loading chunked messages data...</p>
       </div>
     );
   }
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        bottom: '10px',
-        right: '10px',
-        width: expanded ? '500px' : '180px',
-        maxHeight: expanded ? '80vh' : '40px',
-        overflow: 'auto',
-        backgroundColor: '#282c34',
-        color: '#abb2bf',
-        padding: '8px 12px',
-        borderRadius: '6px',
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        zIndex: 9999,
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
-        transition: 'all 0.3s ease'
-      }}
-    >
+    <div className="my-4 border border-gray-700 rounded-md overflow-hidden">
       <div 
         onClick={toggleExpanded} 
-        style={{ 
-          cursor: 'pointer',
-          marginBottom: expanded ? '8px' : '0',
-          fontWeight: 'bold',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
+        className="bg-gray-800 p-3 cursor-pointer font-medium flex justify-between items-center"
       >
         <span>Chunked Messages Debug</span>
         <span>{expanded ? '[-]' : '[+]'}</span>
       </div>
       
       {expanded && (
-        <div>
-          <div style={{ marginBottom: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Status: {chunkedMessages.isComplete ? 'Complete' : 'Streaming'}</span>
-              <span>Chunked Mode: {chunkedMessages.isChunked ? 'ON' : 'OFF'}</span>
+        <div className="bg-gray-900 text-gray-300">
+          {/* Status section - keep this visible and compact */}
+          <div className="grid grid-cols-2 gap-2 p-3 bg-gray-800">
+            <div className="flex space-x-4">
+              <div><strong>Status:</strong> {chunkedMessages.isComplete ? 'Complete' : 'Streaming'}</div>
+              <div><strong>Mode:</strong> {chunkedMessages.isChunked ? 'ON' : 'OFF'}</div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Current Chunk: {(chunkedMessages.currentChunkIndex || 0) + 1}</span>
-              <span>Total Chunks: {chunk1Count}</span>
+            <div className="flex space-x-4 justify-end">
+              <div><strong>Chunk:</strong> {(chunkedMessages.currentChunkIndex || 0) + 1}</div>
+              <div><strong>Total:</strong> {chunk1Count}</div>
+              <div><strong>S1:</strong> {chunkedMessages.responses?.stream1?.length || 0} chars</div>
+              <div><strong>S2:</strong> {chunkedMessages.responses?.stream2?.length || 0} chars</div>
             </div>
           </div>
           
-          <div style={{ marginBottom: '8px' }}>
-            <div>Stream 1: {chunkedMessages.responses?.stream1?.length || 0} chars</div>
-            <div>Stream 2: {chunkedMessages.responses?.stream2?.length || 0} chars</div>
-          </div>
-          
-          {chunkedMessages.chunks?.stream1 && chunkedMessages.chunks?.stream2 && (
-            <div style={{ marginBottom: '8px' }}>
-              <div>Current Chunk Contents:</div>
+          {/* Current chunk section - scrollable container */}
+          <div className="overflow-y-auto" style={{ maxHeight: "300px" }}>
+            <div className="p-3">
+              <h3 className="text-sm font-medium mb-2">Current Chunk</h3>
               {chunkedMessages.currentChunkIndex < chunk1Count && (
-                <>
-                  <div style={{ 
-                    padding: '4px', 
-                    marginTop: '4px', 
-                    background: '#1e2127', 
-                    borderLeft: '3px solid #61afef'
-                  }}>
-                    Stream 1: {chunkedMessages.chunks.stream1[chunkedMessages.currentChunkIndex]?.slice(0, 100) || ""}
-                    {chunkedMessages.chunks.stream1[chunkedMessages.currentChunkIndex]?.length > 100 ? "..." : ""}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-gray-800 border-l-4 border-blue-500 rounded-r-md text-xs">
+                    <div className="font-medium mb-1">Stream 1</div>
+                    <div className="whitespace-pre-wrap break-words">
+                      {chunkedMessages.chunks?.stream1?.[chunkedMessages.currentChunkIndex] || "Empty"}
+                    </div>
                   </div>
-                  <div style={{ 
-                    padding: '4px', 
-                    marginTop: '4px', 
-                    background: '#1e2127', 
-                    borderLeft: '3px solid #c678dd'
-                  }}>
-                    Stream 2: {chunkedMessages.chunks.stream2[chunkedMessages.currentChunkIndex]?.slice(0, 100) || ""}
-                    {chunkedMessages.chunks.stream2[chunkedMessages.currentChunkIndex]?.length > 100 ? "..." : ""}
+                  <div className="p-2 bg-gray-800 border-l-4 border-purple-500 rounded-r-md text-xs">
+                    <div className="font-medium mb-1">Stream 2</div>
+                    <div className="whitespace-pre-wrap break-words">
+                      {chunkedMessages.chunks?.stream2?.[chunkedMessages.currentChunkIndex] || "Empty"}
+                    </div>
                   </div>
-                </>
+                </div>
               )}
-            </div>
-          )}
-          
-          {chunkedMessages.feedback?.stream1 && (
-            <details>
-              <summary style={{ cursor: 'pointer', marginBottom: '8px' }}>Feedback Summary</summary>
-              <div style={{ marginBottom: '12px' }}>
-                {chunkedMessages.feedback.stream1.map((feedback, index) => (
-                  <div key={`s1-${index}`} style={{ marginBottom: '4px' }}>
-                    Chunk {index + 1}: 
-                    {feedback && feedback.rating 
-                      ? ` ${feedback.rating} ${feedback.comment ? `(${feedback.comment})` : ''}` 
-                      : ' No feedback'}
-                  </div>
-                ))}
+            
+              {/* All chunks section */}
+              <h3 className="text-sm font-medium mt-4 mb-2">All Chunks</h3>
+              
+              <div className="grid grid-cols-2 gap-2 mb-1">
+                <div className="font-medium p-1 bg-gray-800 text-center text-xs">Stream 1</div>
+                <div className="font-medium p-1 bg-gray-800 text-center text-xs">Stream 2</div>
               </div>
-            </details>
-          )}
-          
-          <details>
-            <summary style={{ cursor: 'pointer' }}>Full State</summary>
-            <pre style={{ 
-              overflow: 'auto', 
-              maxHeight: '300px',
-              background: '#1e2127',
-              padding: '8px',
-              borderRadius: '4px',
-              marginTop: '8px'
-            }}>{prettyState}</pre>
-          </details>
+              
+              {Array.from({ length: Math.max(chunk1Count, chunk2Count) }).map((_, index) => (
+                <div 
+                  key={`chunk-${index}`} 
+                  className={`grid grid-cols-2 gap-2 mb-2 ${
+                    chunkedMessages.currentChunkIndex === index ? 'bg-gray-800 bg-opacity-30' : ''
+                  }`}
+                >
+                  <div className="p-2 bg-gray-800 border-l-4 border-blue-500 rounded-r-md">
+                    <div className="font-medium mb-1 text-xs">Chunk {index + 1}</div>
+                    <div className="whitespace-pre-wrap break-words max-h-24 overflow-y-auto text-xs">
+                      {chunkedMessages.chunks?.stream1?.[index] || "Empty"}
+                    </div>
+                  </div>
+                  <div className="p-2 bg-gray-800 border-l-4 border-purple-500 rounded-r-md">
+                    <div className="font-medium mb-1 text-xs">Chunk {index + 1}</div>
+                    <div className="whitespace-pre-wrap break-words max-h-24 overflow-y-auto text-xs">
+                      {chunkedMessages.chunks?.stream2?.[index] || "Empty"}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            
+              {/* Full state section */}
+              <details className="mt-2">
+                <summary className="cursor-pointer p-1 bg-gray-800 rounded text-xs">Full State</summary>
+                <pre className="p-2 bg-gray-800 mt-1 overflow-auto max-h-40 text-xs rounded">
+                  {prettyState}
+                </pre>
+              </details>
+            </div>
+          </div>
         </div>
       )}
     </div>
-  );
+  ); // Added missing closing parenthesis here
 };
 
 export default ChunkedMessagesDebug;
