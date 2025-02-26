@@ -38,7 +38,7 @@ type chunkedMessagesActions = {
   startFeedbackSession: () => void;
   updateStreamContent: (streamId: 'stream1' | 'stream2', content: string) => void;
   completeStreams: () => void;
-  createChunks: (numChunks?: number) => void;
+  createChunks: (chunkSize?: number) => void; // Changed from numChunks to chunkSize
   recordFeedback: (streamId: 'stream1' | 'stream2', feedback: { rating?: 'positive' | 'negative'; comment?: string }) => void;
   showNextChunk: () => void;
   resetFeedbackSession: () => void;
@@ -103,24 +103,23 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     get().createChunks();
   },
   
-  createChunks: (numChunks = 5) => {
+  createChunks: (chunkSize = 100) => { // Default to 100 characters per chunk
     set((state) => {
       const { stream1, stream2 } = state.chunkedMessages.responses;
       
-      // Divide text into chunks by percentage
-      const createTextChunks = (text: string, count: number) => {
+      // Divide text into chunks by character count instead of percentage
+      const createTextChunks = (text: string, size: number) => {
         const chunks: string[] = [];
-        const chunkSize = Math.ceil(text.length / count);
         
-        for (let i = 0; i < count; i++) {
-          const start = i * chunkSize;
-          const end = Math.min(start + chunkSize, text.length);
-          chunks.push(text.substring(start, end));
+        for (let i = 0; i < text.length; i += size) {
+          chunks.push(text.substring(i, Math.min(i + size, text.length)));
         }
+        
         console.log('Created chunks:', {
-            stream1: state.chunkedMessages.chunks.stream1.map(c => c.length),
-            stream2: state.chunkedMessages.chunks.stream2.map(c => c.length),
-          });
+          stream1: chunks.map(c => c.length),
+          stream2: chunks.map(c => c.length),
+        });
+        
         return chunks;
       };
       
@@ -129,8 +128,8 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
         return Array(count).fill(null).map(() => ({}));
       };
       
-      const stream1Chunks = createTextChunks(stream1, numChunks);
-      const stream2Chunks = createTextChunks(stream2, numChunks);
+      const stream1Chunks = createTextChunks(stream1, chunkSize);
+      const stream2Chunks = createTextChunks(stream2, chunkSize);
       
       return {
         chunkedMessages: {
