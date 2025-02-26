@@ -1,10 +1,10 @@
-// src/stores/slices/feedbackTestingSlice.ts
+// src/stores/slices/chunkedMessagesSlice.ts
 
 import { StateCreator } from 'zustand';
 import { StoreState } from '..';
 
 // Store the complete text and all feedback data
-type FeedbackTestingState = {
+type chunkedMessagesState = {
   // Complete responses
   responses: {
     stream1: string;
@@ -30,11 +30,11 @@ type FeedbackTestingState = {
   isComplete: boolean;
   
   // Is testing mode active
-  isTestingMode: boolean;
+  isChunked: boolean;
 };
 
 // Define actions for the slice
-type FeedbackTestingActions = {
+type chunkedMessagesActions = {
   startFeedbackSession: () => void;
   updateStreamContent: (streamId: 'stream1' | 'stream2', content: string) => void;
   completeStreams: () => void;
@@ -44,12 +44,12 @@ type FeedbackTestingActions = {
   resetFeedbackSession: () => void;
 };
 
-export type FeedbackTestingStore = {
-  feedbackTesting: FeedbackTestingState;
-} & FeedbackTestingActions;
+export type chunkedMessagesStore = {
+  chunkedMessages: chunkedMessagesState;
+} & chunkedMessagesActions;
 
 // Initial state
-const INITIAL_STATE: FeedbackTestingState = {
+const INITIAL_STATE: chunkedMessagesState = {
   responses: {
     stream1: '',
     stream2: '',
@@ -64,27 +64,27 @@ const INITIAL_STATE: FeedbackTestingState = {
   },
   currentChunkIndex: 0,
   isComplete: false,
-  isTestingMode: false,
+  isChunked: false,
 };
 
-export const createFeedbackTestingSlice: StateCreator<StoreState, [], [], FeedbackTestingStore> = (set, get) => ({
-  feedbackTesting: INITIAL_STATE,
+export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunkedMessagesStore> = (set, get) => ({
+  chunkedMessages: INITIAL_STATE,
   
   startFeedbackSession: () => {
     set({
-      feedbackTesting: {
+      chunkedMessages: {
         ...INITIAL_STATE,
-        isTestingMode: true,
+        isChunked: true,
       }
     });
   },
   
   updateStreamContent: (streamId, content) => {
     set((state) => ({
-      feedbackTesting: {
-        ...state.feedbackTesting,
+      chunkedMessages: {
+        ...state.chunkedMessages,
         responses: {
-          ...state.feedbackTesting.responses,
+          ...state.chunkedMessages.responses,
           [streamId]: content,
         }
       }
@@ -93,8 +93,8 @@ export const createFeedbackTestingSlice: StateCreator<StoreState, [], [], Feedba
   
   completeStreams: () => {
     set((state) => ({
-      feedbackTesting: {
-        ...state.feedbackTesting,
+      chunkedMessages: {
+        ...state.chunkedMessages,
         isComplete: true,
       }
     }));
@@ -105,7 +105,7 @@ export const createFeedbackTestingSlice: StateCreator<StoreState, [], [], Feedba
   
   createChunks: (numChunks = 5) => {
     set((state) => {
-      const { stream1, stream2 } = state.feedbackTesting.responses;
+      const { stream1, stream2 } = state.chunkedMessages.responses;
       
       // Divide text into chunks by percentage
       const createTextChunks = (text: string, count: number) => {
@@ -118,8 +118,8 @@ export const createFeedbackTestingSlice: StateCreator<StoreState, [], [], Feedba
           chunks.push(text.substring(start, end));
         }
         console.log('Created chunks:', {
-            stream1: state.feedbackTesting.chunks.stream1.map(c => c.length),
-            stream2: state.feedbackTesting.chunks.stream2.map(c => c.length),
+            stream1: state.chunkedMessages.chunks.stream1.map(c => c.length),
+            stream2: state.chunkedMessages.chunks.stream2.map(c => c.length),
           });
         return chunks;
       };
@@ -133,8 +133,8 @@ export const createFeedbackTestingSlice: StateCreator<StoreState, [], [], Feedba
       const stream2Chunks = createTextChunks(stream2, numChunks);
       
       return {
-        feedbackTesting: {
-          ...state.feedbackTesting,
+        chunkedMessages: {
+          ...state.chunkedMessages,
           chunks: {
             stream1: stream1Chunks,
             stream2: stream2Chunks,
@@ -150,19 +150,19 @@ export const createFeedbackTestingSlice: StateCreator<StoreState, [], [], Feedba
   
   recordFeedback: (streamId, chunkFeedback) => {
     set((state) => {
-      const currentIndex = state.feedbackTesting.currentChunkIndex;
+      const currentIndex = state.chunkedMessages.currentChunkIndex;
       const updatedFeedback = {
-        ...state.feedbackTesting.feedback,
+        ...state.chunkedMessages.feedback,
         [streamId]: [
-          ...state.feedbackTesting.feedback[streamId].slice(0, currentIndex),
+          ...state.chunkedMessages.feedback[streamId].slice(0, currentIndex),
           chunkFeedback,
-          ...state.feedbackTesting.feedback[streamId].slice(currentIndex + 1)
+          ...state.chunkedMessages.feedback[streamId].slice(currentIndex + 1)
         ]
       };
       
       return {
-        feedbackTesting: {
-          ...state.feedbackTesting,
+        chunkedMessages: {
+          ...state.chunkedMessages,
           feedback: updatedFeedback
         }
       };
@@ -171,12 +171,12 @@ export const createFeedbackTestingSlice: StateCreator<StoreState, [], [], Feedba
   
   showNextChunk: () => {
     set((state) => {
-      const nextIndex = state.feedbackTesting.currentChunkIndex + 1;
-      const maxIndex = state.feedbackTesting.chunks.stream1.length - 1;
+      const nextIndex = state.chunkedMessages.currentChunkIndex + 1;
+      const maxIndex = state.chunkedMessages.chunks.stream1.length - 1;
       
       return {
-        feedbackTesting: {
-          ...state.feedbackTesting,
+        chunkedMessages: {
+          ...state.chunkedMessages,
           currentChunkIndex: Math.min(nextIndex, maxIndex)
         }
       };
@@ -185,7 +185,7 @@ export const createFeedbackTestingSlice: StateCreator<StoreState, [], [], Feedba
   
   resetFeedbackSession: () => {
     set({
-      feedbackTesting: INITIAL_STATE
+      chunkedMessages: INITIAL_STATE
     });
   }
 });

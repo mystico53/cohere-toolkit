@@ -6,9 +6,9 @@ import { persist } from 'zustand/middleware';
 import { shallow } from 'zustand/shallow';
 
 import { SettingsStore, createSettingsSlice } from '@/stores/slices/settingsSlice';
-import { FeedbackTestingStore, createFeedbackTestingSlice } from './slices/feedbackTestingSlice';
+import { chunkedMessagesStore, createchunkedMessagesSlice } from './slices/chunkedMessagesSlice';
 
-type PersistedStore = SettingsStore & FeedbackTestingStore;
+type PersistedStore = SettingsStore & chunkedMessagesStore;
 
 const useEmptyPersistedStore = create<PersistedStore>((...a) => ({
   ...createSettingsSlice(...a),
@@ -18,7 +18,7 @@ export const usePersistedStore = create<PersistedStore>()(
   persist(
     (...a) => ({
       ...createSettingsSlice(...a),
-      ...createFeedbackTestingSlice(...a),
+      ...createchunkedMessagesSlice(...a),
     }),
     {
       name: 'persisted-store',
@@ -54,15 +54,17 @@ export const useSettingsStore = () => {
       setIsConvListPanelOpen: state.setIsConvListPanelOpen,
       humanFeedback: state.settings.humanFeedback,
       setHumanFeedback: (value: boolean) => state.setSettings({ humanFeedback: value }),
+      showChunkedMessages: state.settings.showChunkedMessages,
+      setShowChunkedMessages: (value: boolean) => state.setSettings({ showChunkedMessages: value }),
     }),
     shallow
   );
 };
 
-export const useFeedbackTestingStore = () => {
+export const usechunkedMessagesStore = () => {
   return usePersistedStoresWithHydration(
     (state) => ({
-      feedbackTesting: state.feedbackTesting,
+      chunkedMessages: state.chunkedMessages,
       startFeedbackSession: state.startFeedbackSession,
       updateStreamContent: state.updateStreamContent,
       completeStreams: state.completeStreams,

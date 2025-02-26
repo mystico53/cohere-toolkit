@@ -7,6 +7,7 @@ import { useSettingsDefaults } from '@/hooks/settings';
 import { useParamsStore } from '@/stores';
 import { cn } from '@/utils';
 import { ShowHumanFeedbackToggle } from './ShowHumanFeedbackToggle';
+import { ShowChunkedMessagesToggle } from './ShowChunkedMessagesToggle';
 
 /**
  * @description Settings tab to adjust endpoint params like preamble and temperature.
@@ -56,6 +57,8 @@ export const SettingsTab: React.FC = () => {
       />
 
       <ShowHumanFeedbackToggle />
+      
+      <ShowChunkedMessagesToggle />
 
       <InputLabel label={STRINGS.preamble}>
         <textarea

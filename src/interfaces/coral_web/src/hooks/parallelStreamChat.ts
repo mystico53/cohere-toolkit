@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { useFeedbackTestingStore, useSettingsStore } from '@/stores/persistedStore';
+import { usechunkedMessagesStore, useSettingsStore } from '@/stores/persistedStore';
 
 import {
   ChatResponseEvent,
@@ -59,7 +59,7 @@ export const useParallelStreamChat = () => {
   const { 
     updateStreamContent, 
     completeStreams
-  } = useFeedbackTestingStore();
+  } = usechunkedMessagesStore();
 
   const accumulatedText1 = useRef('');
   const accumulatedText2 = useRef('');
@@ -130,7 +130,7 @@ export const useParallelStreamChat = () => {
                 accumulatedText1.current += data.data.text || '';
                 
                 // Only store if in testing mode
-                if (settings.feedbackTestingEnabled) {
+                if (settings.showChunkedMessages) {
                   updateStreamContent('stream1', accumulatedText1.current);
                 }
               }
@@ -157,7 +157,7 @@ export const useParallelStreamChat = () => {
               if (data?.event === StreamEvent.STREAM_END && 'text' in data.data) {
                 accumulatedText2.current = data.data.text || accumulatedText2.current;
                 
-                if (settings.feedbackTestingEnabled) {
+                if (settings.showChunkedMessages) {
                   updateStreamContent('stream2', accumulatedText2.current);
                 }
               }
@@ -180,7 +180,7 @@ export const useParallelStreamChat = () => {
           onFinish: () => {
             debug.log('streams', 'Both streams finished');
 
-            if (settings.feedbackTestingEnabled) {
+            if (settings.showChunkedMessages) {
               completeStreams();
             }
 

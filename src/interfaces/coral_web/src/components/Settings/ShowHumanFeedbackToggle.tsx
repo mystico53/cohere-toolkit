@@ -1,6 +1,6 @@
 'use client';
 
-import { Switch, Text } from '@/components/Shared';  // Note: Using Shared instead of UI
+import { Switch, Text } from '@/components/Shared';
 import { useSettingsStore } from '@/stores';
 
 export const ShowHumanFeedbackToggle = () => {
