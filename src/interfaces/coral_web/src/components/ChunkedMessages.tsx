@@ -74,73 +74,73 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     const progress = totalChunks > 0 ? ((currentIndex + 1) / totalChunks) * 100 : 0;
 
     return (
-      <div className="flex h-full flex-col gap-y-4 px-4 py-6 md:gap-y-6" ref={ref}>
-        <div className="mt-auto flex flex-col gap-y-4 md:gap-y-6">
-          {/* Navigation header */}
-          <div className="flex items-center justify-between border-b border-marble-950 pb-3">
-            <div className="text-lg font-medium">Message Chunks</div>
-            <div className="flex items-center gap-2">
-              <div className="text-sm text-marble-400">
-                Chunk {currentIndex + 1} of {totalChunks}
+        <div className="flex h-full flex-col gap-y-4 px-4 py-6 md:gap-y-6" ref={ref}>
+          <div className="flex flex-col gap-y-4 md:gap-y-6">
+            {/* Two-column layout for chunks */}
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left column: Stream 1 */}
+              <div className="flex flex-col">
+                <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
+                <MessageRow
+                  isLast={false}
+                  isStreamingToolEvents={false}
+                  message={{
+                    type: MessageType.BOT,
+                    state: BotState.FULFILLED,
+                    text: accumulatedChunk1,
+                  }}
+                  onRetry={onRetry}
+                />
               </div>
-              <button 
-                onClick={showNextChunk}
-                disabled={currentIndex >= totalChunks - 1}
-                className={cn(
-                  "px-3 py-1 rounded-md text-sm",
-                  currentIndex >= totalChunks - 1 
-                    ? "bg-marble-800 text-marble-500 cursor-not-allowed" 
-                    : "bg-marble-800 hover:bg-marble-700 text-white"
-                )}
-              >
-                Next Chunk
-              </button>
+      
+              {/* Right column: Stream 2 */}
+              <div className="flex flex-col">
+                <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
+                <MessageRow
+                  isLast={false}
+                  isStreamingToolEvents={false}
+                  message={{
+                    type: MessageType.BOT,
+                    state: BotState.FULFILLED,
+                    text: accumulatedChunk2,
+                  }}
+                  onRetry={onRetry}
+                />
+              </div>
             </div>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="w-full bg-marble-900 h-1 rounded-full">
-            <div 
-              className="bg-blue-500 h-1 rounded-full" 
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          {/* Two-column layout for chunks */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Left column: Stream 1 */}
-            <div className="flex flex-col">
-              <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
-              <MessageRow
-                isLast={false}
-                isStreamingToolEvents={false}
-                message={{
-                  type: MessageType.BOT,
-                  state: BotState.FULFILLED,
-                  text: accumulatedChunk1,
-                }}
-                onRetry={onRetry}
+            
+            {/* Progress bar - now at bottom */}
+            <div className="w-full bg-marble-900 h-1 rounded-full mt-4">
+              <div 
+                className="bg-blue-500 h-1 rounded-full" 
+                style={{ width: `${progress}%` }}
               />
             </div>
-
-            {/* Right column: Stream 2 */}
-            <div className="flex flex-col">
-              <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
-              <MessageRow
-                isLast={false}
-                isStreamingToolEvents={false}
-                message={{
-                  type: MessageType.BOT,
-                  state: BotState.FULFILLED,
-                  text: accumulatedChunk2,
-                }}
-                onRetry={onRetry}
-              />
+      
+            {/* Navigation header - now at bottom with border-top instead of border-bottom */}
+            <div className="flex items-center justify-between border-t border-marble-950 pt-3 mt-2">
+              <div className="text-lg font-medium">Message Chunks</div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-marble-400">
+                  Chunk {currentIndex + 1} of {totalChunks}
+                </div>
+                <button 
+                  onClick={showNextChunk}
+                  disabled={currentIndex >= totalChunks - 1}
+                  className={cn(
+                    "px-3 py-1 rounded-md text-sm",
+                    currentIndex >= totalChunks - 1 
+                      ? "bg-marble-800 text-marble-500 cursor-not-allowed" 
+                      : "bg-marble-800 hover:bg-marble-700 text-white"
+                  )}
+                >
+                  Next Chunk
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    );
+      );
   }
 );
 
