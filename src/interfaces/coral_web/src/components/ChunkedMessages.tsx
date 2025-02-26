@@ -7,7 +7,10 @@ import { BotState, MessageType } from '@/types/message';
 import { cn } from '@/utils';
 import { usechunkedMessagesStore } from '@/stores/persistedStore';
 
-// ...rest of imports and type definitions...
+type ChunkedMessagesProps = {
+    agentId: string; 
+    onRetry: () => void;
+  };
 
 const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
   function ChunkedMessagesInternal(props, ref) {
