@@ -29,7 +29,7 @@ const ChunkedMessagesDebug: React.FC = () => {
   }
 
   return (
-    <div className="my-4 border border-gray-700 rounded-md overflow-hidden">
+    <div className="my-4 border border-gray-700 rounded-md overflow-hidden h-[1800px]">
       <div 
         onClick={toggleExpanded} 
         className="bg-gray-800 p-3 cursor-pointer font-medium flex justify-between items-center"
@@ -55,7 +55,7 @@ const ChunkedMessagesDebug: React.FC = () => {
           </div>
           
           {/* Current chunk section - scrollable container */}
-          <div className="overflow-y-auto" style={{ maxHeight: "300px" }}>
+          <div className="overflow-y-auto" style={{ maxHeight: "500px" }}>
             <div className="p-3">
               <h3 className="text-sm font-medium mb-2">Current Chunk</h3>
               {chunkedMessages.currentChunkIndex < chunk1Count && (
