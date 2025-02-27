@@ -27,7 +27,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     // Get data from the chunkedMessages store
     const { chunkedMessages, showNextChunk, startFeedbackSession } = usechunkedMessagesStore();
     
-    // Get current chunks index - moved this up before the useEffect that needs it
+    // Get current chunks index
     const currentIndex = chunkedMessages?.currentChunkIndex || 0;
     
     // Debug logging
@@ -35,7 +35,8 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       console.log("[DEBUG] ChunkedMessages store data:", {
         isChunked: chunkedMessages?.isChunked,
         chunks1: chunkedMessages?.chunks?.stream1?.length,
-        chunks2: chunkedMessages?.chunks?.stream2?.length
+        chunks2: chunkedMessages?.chunks?.stream2?.length,
+        currentIndex
       });
       
       // Auto-start feedback session if not already started
@@ -44,15 +45,26 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
         console.log("[DEBUG] Auto-starting feedback session");
         startFeedbackSession();
       }
-    }, [chunkedMessages, startFeedbackSession]);
+    }, [chunkedMessages, startFeedbackSession, currentIndex]);
     
-    // Auto-scroll to bottom when new chunks are added
+    // Auto-scroll when new chunks are added to keep current chunk in view above progress bar
     useEffect(() => {
       if (chunksContainerRef.current && currentIndex >= 0) {
-        // Scroll to the bottom of the container when a new chunk is displayed
-        chunksContainerRef.current.scrollTop = chunksContainerRef.current.scrollHeight;
+        // Calculate the ideal scroll position:
+        // Full scroll height - visible height = how much to scroll to see the bottom
+        const fullHeight = chunksContainerRef.current.scrollHeight;
+        const visibleHeight = chunksContainerRef.current.clientHeight;
+        
+        // Set scroll position to ensure latest content is visible
+        chunksContainerRef.current.scrollTop = fullHeight - visibleHeight;
+        
+        console.log("[DEBUG] Scrolling adjusted:", {
+          scrollHeight: fullHeight,
+          clientHeight: visibleHeight,
+          scrollTop: chunksContainerRef.current.scrollTop
+        });
       }
-    }, [currentIndex]);
+    }, [currentIndex, chunkedMessages?.chunks?.stream1?.length]);
     
     // Modified check: only care if there are actual chunks
     const hasChunks = chunkedMessages?.chunks?.stream1?.length > 0 && 
@@ -82,7 +94,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     const totalChunks = chunkedMessages.chunks?.stream1?.length || 0;
     const progress = totalChunks > 0 ? ((currentIndex + 1) / totalChunks) * 100 : 0;
 
-    // Generate accumulated chunks for display
+    // Generate message pairs in chronological order (oldest first, newest last)
     const messagePairs: MessagePair[] = [];
     for (let i = 0; i <= currentIndex; i++) {
       const chunk1 = chunkedMessages.chunks?.stream1?.[i] || '';
@@ -97,12 +109,12 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
 
     return (
       <div className="flex flex-col h-full relative" ref={ref}>
-        {/* Main content area with flex-grow to take available space */}
+        {/* Main content area with messages */}
         <div 
           ref={chunksContainerRef}
-          className="flex-grow overflow-y-auto px-4 py-6 pb-20" // Added extra bottom padding
+          className="flex-grow overflow-y-auto px-4 py-6 pb-20"
         >
-          {/* Display chunks from oldest (top) to newest (bottom) */}
+          {/* Messages in chronological order (oldest at top, newest at bottom) */}
           {messagePairs.map((pair) => (
             <div key={`chunk-${pair.index}`} className="mb-6 last:mb-0">
               <div className="text-sm text-marble-400 font-medium mb-2">
@@ -143,7 +155,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
           ))}
         </div>
         
-        {/* Fixed control panel at bottom with absolute positioning */}
+        {/* Fixed control panel at bottom */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-marble-950 bg-marble-1000 px-4 py-3 z-10 shadow-lg">
           {/* Progress bar */}
           <div className="w-full bg-marble-900 h-1 rounded-full mb-3">
