@@ -46,6 +46,7 @@ type chunkedMessagesActions = {
   showNextChunk: () => void;
   showNextChunkForStream: (streamId: 'stream1' | 'stream2') => void;
   resetFeedbackSession: () => void;
+  resetEverything: () => void;
 };
 
 export type chunkedMessagesStore = {
@@ -263,5 +264,40 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     set({
       chunkedMessages: INITIAL_STATE
     });
-  }
+  },
+
+  resetEverything: () => {
+    set((state) => {
+      // Keep existing responses and chunks
+      const existingResponses = state.chunkedMessages?.responses || INITIAL_STATE.responses;
+      const existingChunks = state.chunkedMessages?.chunks || INITIAL_STATE.chunks;
+      
+      // Create fresh empty feedback arrays based on current chunk counts
+      const createEmptyFeedback = (count: number) => {
+        return Array(count).fill(null).map(() => ({}));
+      };
+      
+      return {
+        chunkedMessages: {
+          // Keep these parts
+          responses: existingResponses,
+          chunks: existingChunks,
+          
+          // Reset these parts
+          currentChunkIndices: {
+            stream1: 0,
+            stream2: 0
+          },
+          feedback: {
+            stream1: createEmptyFeedback(existingChunks.stream1.length),
+            stream2: createEmptyFeedback(existingChunks.stream2.length),
+          },
+          
+          // Keep this true so we don't auto-start a feedback session again
+          isChunked: true,
+          isComplete: true
+        }
+      };
+    });
+  },
 });

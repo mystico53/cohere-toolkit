@@ -62,8 +62,13 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       chunkedMessages, 
       showNextChunk, 
       showNextChunkForStream, 
-      startFeedbackSession 
+      startFeedbackSession,
+      resetEverything 
     } = usechunkedMessagesStore();
+
+    const handleStartOver = () => {
+      resetEverything();
+    };
     
     // Track current and previous indices to detect changes
     const currentIndices = chunkedMessages?.currentChunkIndices || { stream1: 0, stream2: 0 };
@@ -303,6 +308,12 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
                 )}
               >
                 Next Both
+              </button>
+              <button 
+                onClick={handleStartOver}
+                className="px-3 py-1 rounded-md text-sm bg-red-800 hover:bg-red-700 text-white"
+              >
+                Start Over
               </button>
             </div>
           </div>

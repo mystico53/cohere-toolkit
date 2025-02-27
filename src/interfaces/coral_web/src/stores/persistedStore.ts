@@ -73,6 +73,7 @@ export const usechunkedMessagesStore = () => {
       showNextChunkForStream: state.showNextChunkForStream,
       resetFeedbackSession: state.resetFeedbackSession,
       recordFeedback: state.recordFeedback,
+      resetEverything: state.resetEverything,
     }),
     shallow
   );

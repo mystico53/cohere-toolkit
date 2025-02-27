@@ -59,7 +59,7 @@ const StreamLoadingIndicator = () => {
   const readingTimeMinutes = parseFloat(pages).toFixed(1);
   const readingTimeDisplay = parseFloat(readingTimeMinutes) < 0.1
     ? "< 0.1 min Review Time" 
-    : `~${readingTimeMinutes} ${parseFloat(readingTimeMinutes) === 1 ? "min" : "mins"} Review Time`;
+    : `~${readingTimeMinutes} ${parseFloat(readingTimeMinutes) === 1 ? "min" : "mins"} Estimated Review Time`;
   
   return (
     <div className="ml-3 text-sm bg-marble-800 px-2 py-1 rounded-md text-blue-300 animate-pulse">
