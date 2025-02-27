@@ -23,8 +23,11 @@ type chunkedMessagesState = {
     stream2: Array<{ rating?: 'positive' | 'negative'; comment?: string }>;
   };
   
-  // Current visible chunk index
-  currentChunkIndex: number;
+  // Current visible chunk index for EACH stream
+  currentChunkIndices: {
+    stream1: number;
+    stream2: number;
+  };
   
   // Track completion status
   isComplete: boolean;
@@ -38,9 +41,10 @@ type chunkedMessagesActions = {
   startFeedbackSession: () => void;
   updateStreamContent: (streamId: 'stream1' | 'stream2', content: string) => void;
   completeStreams: () => void;
-  createChunks: (chunkSize?: number) => void; // Changed from numChunks to chunkSize
+  createChunks: (chunkSize?: number) => void;
   recordFeedback: (streamId: 'stream1' | 'stream2', feedback: { rating?: 'positive' | 'negative'; comment?: string }) => void;
   showNextChunk: () => void;
+  showNextChunkForStream: (streamId: 'stream1' | 'stream2') => void;
   resetFeedbackSession: () => void;
 };
 
@@ -62,7 +66,10 @@ const INITIAL_STATE: chunkedMessagesState = {
     stream1: [],
     stream2: [],
   },
-  currentChunkIndex: 0,
+  currentChunkIndices: {
+    stream1: 0,
+    stream2: 0,
+  },
   isComplete: false,
   isChunked: false,
 };
@@ -75,7 +82,10 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
       chunkedMessages: {
         ...INITIAL_STATE,
         isChunked: true,
-        currentChunkIndex: 0, // Explicitly reset to 0
+        currentChunkIndices: {
+          stream1: 0,
+          stream2: 0
+        }
       }
     });
   },
@@ -97,7 +107,10 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
       chunkedMessages: {
         ...state.chunkedMessages,
         isComplete: true,
-        currentChunkIndex: 0, // Reset to 0 when streams complete
+        currentChunkIndices: {
+          stream1: 0,
+          stream2: 0
+        }
       }
     }));
     
@@ -158,7 +171,7 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
   
   recordFeedback: (streamId, chunkFeedback) => {
     set((state) => {
-      const currentIndex = state.chunkedMessages.currentChunkIndex;
+      const currentIndex = state.chunkedMessages.currentChunkIndices[streamId];
       const updatedFeedback = {
         ...state.chunkedMessages.feedback,
         [streamId]: [
@@ -177,17 +190,57 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     });
   },
   
+  // Keep the original function to advance both streams simultaneously if needed
   showNextChunk: () => {
     set((state) => {
-      const nextIndex = state.chunkedMessages.currentChunkIndex + 1;
-      const stream1MaxIndex = state.chunkedMessages.chunks.stream1.length - 1;
-      const stream2MaxIndex = state.chunkedMessages.chunks.stream2.length - 1;
-      const maxIndex = Math.max(stream1MaxIndex, stream2MaxIndex);
+      const nextIndex1 = state.chunkedMessages.currentChunkIndices.stream1 + 1;
+      const nextIndex2 = state.chunkedMessages.currentChunkIndices.stream2 + 1;
+      const maxIndex1 = state.chunkedMessages.chunks.stream1.length - 1;
+      const maxIndex2 = state.chunkedMessages.chunks.stream2.length - 1;
       
       return {
         chunkedMessages: {
           ...state.chunkedMessages,
-          currentChunkIndex: Math.min(nextIndex, maxIndex)
+          currentChunkIndices: {
+            stream1: Math.min(nextIndex1, maxIndex1),
+            stream2: Math.min(nextIndex2, maxIndex2)
+          }
+        }
+      };
+    });
+  },
+  
+  // New function to advance only one stream
+  showNextChunkForStream: (streamId: 'stream1' | 'stream2') => {
+    set((state) => {
+      // Ensure chunkedMessages exists
+      if (!state.chunkedMessages) {
+        return { chunkedMessages: INITIAL_STATE };
+      }
+      
+      // Ensure currentChunkIndices exists with defaults
+      const currentIndices = state.chunkedMessages.currentChunkIndices || { stream1: 0, stream2: 0 };
+      
+      // Ensure chunks exists with defaults
+      const chunks = state.chunkedMessages.chunks || { stream1: [], stream2: [] };
+      const streamChunks = chunks[streamId] || [];
+      
+      // Safely get current index with fallback to 0
+      const currentIndex = currentIndices[streamId] ?? 0;
+      
+      // Calculate next index
+      const nextIndex = currentIndex + 1;
+      const maxIndex = Math.max(0, streamChunks.length - 1);
+      
+      return {
+        chunkedMessages: {
+          ...state.chunkedMessages,
+          // Ensure we have the new structure in state
+          chunks: chunks,
+          currentChunkIndices: {
+            ...currentIndices,
+            [streamId]: Math.min(nextIndex, maxIndex)
+          }
         }
       };
     });

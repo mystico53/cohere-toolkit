@@ -22,7 +22,7 @@ export const usePersistedStore = create<PersistedStore>()(
     }),
     {
       name: 'persisted-store',
-      version: 2,
+      version: 3,
     }
   )
 );
@@ -70,6 +70,7 @@ export const usechunkedMessagesStore = () => {
       completeStreams: state.completeStreams,
       createChunks: state.createChunks,
       showNextChunk: state.showNextChunk,
+      showNextChunkForStream: state.showNextChunkForStream,
       resetFeedbackSession: state.resetFeedbackSession,
       recordFeedback: state.recordFeedback,
     }),
