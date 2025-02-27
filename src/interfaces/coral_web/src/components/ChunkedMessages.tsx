@@ -63,6 +63,13 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     const [prevIndex, setPrevIndex] = useState(currentIndex);
     const [isAnimating, setIsAnimating] = useState(false);
     
+    // Helper function to scroll to the bottom
+    const scrollToBottom = () => {
+      if (chunksContainerRef.current) {
+        chunksContainerRef.current.scrollTop = chunksContainerRef.current.scrollHeight;
+      }
+    };
+    
     // Add styles to document on mount
     useEffect(() => {
       if (typeof document !== 'undefined') {
@@ -82,6 +89,22 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
         }
       }
     }, []);
+    
+    // Scroll to bottom when chunks are initially loaded
+    useEffect(() => {
+      if (hasChunks) {
+        scrollToBottom();
+      }
+    }, [chunkedMessages?.chunks?.stream1?.length, chunkedMessages?.chunks?.stream2?.length]);
+    
+    // Scroll to bottom when current index changes
+    useEffect(() => {
+      scrollToBottom();
+      
+      // Also scroll after a small delay to handle any DOM updates
+      const delayedScroll = setTimeout(scrollToBottom, 50);
+      return () => clearTimeout(delayedScroll);
+    }, [currentIndex]);
     
     // Debug logging
     useEffect(() => {
@@ -107,12 +130,20 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
         setIsAnimating(true);
         setPrevIndex(currentIndex);
         
+        // Scroll to bottom immediately and after animation starts
+        scrollToBottom();
+        const animationScroll = setTimeout(scrollToBottom, 50);
+        
         // Clear animation state after animation completes
-        const timer = setTimeout(() => {
+        const animationTimer = setTimeout(() => {
           setIsAnimating(false);
+          scrollToBottom(); // Scroll once more after animation completes
         }, 500); // Match this to animation duration
         
-        return () => clearTimeout(timer);
+        return () => {
+          clearTimeout(animationTimer);
+          clearTimeout(animationScroll);
+        };
       }
     }, [currentIndex, prevIndex]);
     
@@ -160,15 +191,22 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     // Determine the index of the latest chunk
     const lastChunkIndex = messagePairs.length - 1;
 
+    // Custom event handler for Next Chunk that also scrolls
+    const handleNextChunk = () => {
+      showNextChunk();
+      // Scroll will happen via the useEffect that watches currentIndex
+    };
+
     return (
-      <div className="flex flex-col h-full relative" ref={ref}>
-        {/* Content area with flex-col-reverse to make newest chunks appear at bottom */}
+      <div className="flex flex-col h-full relative overflow-hidden" ref={ref}>
+        {/* Content area with explicit height to enable scrolling */}
         <div 
           ref={chunksContainerRef}
-          className="flex-grow flex flex-col justify-end overflow-y-auto px-4 py-6 pb-20"
+          className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6 pb-20"
+          style={{ height: 'calc(100% - 60px)', scrollBehavior: 'smooth' }}
         >
           <div className="flex flex-col space-y-6">
-            {/* Messages in order with newest at bottom */}
+            {/* Messages in order */}
             {messagePairs.map((pair, arrayIndex) => (
               <div 
                 key={`chunk-${pair.index}`} 
@@ -220,7 +258,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
         </div>
         
         {/* Fixed control panel at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-marble-950 bg-marble-1000 px-4 py-3 z-10 shadow-lg">
+        <div className="absolute bottom-0 left-0 right-0 h-[60px] border-t border-marble-950 bg-marble-1000 px-4 py-3 z-10 shadow-lg">
           {/* Progress bar with smooth transition */}
           <div className="w-full bg-marble-900 h-1 rounded-full mb-3">
             <div 
@@ -237,7 +275,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
                 Chunk {currentIndex + 1} of {totalChunks}
               </div>
               <button 
-                onClick={showNextChunk}
+                onClick={handleNextChunk}
                 disabled={currentIndex >= totalChunks - 1}
                 className={cn(
                   "px-3 py-1 rounded-md text-sm",
