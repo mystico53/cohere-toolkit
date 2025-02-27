@@ -1,6 +1,6 @@
 'use client';
 
-import React, { forwardRef, useEffect, useRef } from 'react';
+import React, { forwardRef, useEffect, useRef, useState } from 'react';
 import MessageRow from '@/components/MessageRow';
 import { Welcome } from '@/components/Welcome';
 import { BotState, MessageType } from '@/types/message';
@@ -19,6 +19,37 @@ interface MessagePair {
   stream2: string;
 }
 
+// Add this style to your global CSS or load it dynamically
+const globalStyle = `
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-15px);
+  }
+}
+
+.chunk-animate-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.chunk-animate-up {
+  animation: slideUp 0.4s ease-out forwards;
+}
+`;
+
 const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
   function ChunkedMessagesInternal(props, ref) {
     const { agentId, onRetry } = props;
@@ -27,8 +58,30 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     // Get data from the chunkedMessages store
     const { chunkedMessages, showNextChunk, startFeedbackSession } = usechunkedMessagesStore();
     
-    // Get current chunks index
+    // Track current and previous index to detect changes
     const currentIndex = chunkedMessages?.currentChunkIndex || 0;
+    const [prevIndex, setPrevIndex] = useState(currentIndex);
+    const [isAnimating, setIsAnimating] = useState(false);
+    
+    // Add styles to document on mount
+    useEffect(() => {
+      if (typeof document !== 'undefined') {
+        // Check if the style already exists to avoid duplicates
+        const existingStyle = document.getElementById('chunked-messages-animation-style');
+        if (!existingStyle) {
+          const styleElement = document.createElement('style');
+          styleElement.id = 'chunked-messages-animation-style';
+          styleElement.innerHTML = globalStyle;
+          document.head.appendChild(styleElement);
+          
+          // Clean up on unmount
+          return () => {
+            const element = document.getElementById('chunked-messages-animation-style');
+            if (element) document.head.removeChild(element);
+          };
+        }
+      }
+    }, []);
     
     // Debug logging
     useEffect(() => {
@@ -47,24 +100,21 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       }
     }, [chunkedMessages, startFeedbackSession, currentIndex]);
     
-    // Auto-scroll when new chunks are added to keep current chunk in view above progress bar
+    // Animate and track when new chunks appear
     useEffect(() => {
-      if (chunksContainerRef.current && currentIndex >= 0) {
-        // Calculate the ideal scroll position:
-        // Full scroll height - visible height = how much to scroll to see the bottom
-        const fullHeight = chunksContainerRef.current.scrollHeight;
-        const visibleHeight = chunksContainerRef.current.clientHeight;
+      if (currentIndex > prevIndex) {
+        // A new chunk was added
+        setIsAnimating(true);
+        setPrevIndex(currentIndex);
         
-        // Set scroll position to ensure latest content is visible
-        chunksContainerRef.current.scrollTop = fullHeight - visibleHeight;
+        // Clear animation state after animation completes
+        const timer = setTimeout(() => {
+          setIsAnimating(false);
+        }, 500); // Match this to animation duration
         
-        console.log("[DEBUG] Scrolling adjusted:", {
-          scrollHeight: fullHeight,
-          clientHeight: visibleHeight,
-          scrollTop: chunksContainerRef.current.scrollTop
-        });
+        return () => clearTimeout(timer);
       }
-    }, [currentIndex, chunkedMessages?.chunks?.stream1?.length]);
+    }, [currentIndex, prevIndex]);
     
     // Modified check: only care if there are actual chunks
     const hasChunks = chunkedMessages?.chunks?.stream1?.length > 0 && 
@@ -94,7 +144,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     const totalChunks = chunkedMessages.chunks?.stream1?.length || 0;
     const progress = totalChunks > 0 ? ((currentIndex + 1) / totalChunks) * 100 : 0;
 
-    // Generate message pairs in chronological order (oldest first, newest last)
+    // Generate message pairs in chronological order
     const messagePairs: MessagePair[] = [];
     for (let i = 0; i <= currentIndex; i++) {
       const chunk1 = chunkedMessages.chunks?.stream1?.[i] || '';
@@ -106,61 +156,75 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
         stream2: chunk2
       });
     }
+    
+    // Determine the index of the latest chunk
+    const lastChunkIndex = messagePairs.length - 1;
 
     return (
       <div className="flex flex-col h-full relative" ref={ref}>
-        {/* Main content area with messages */}
+        {/* Content area with flex-col-reverse to make newest chunks appear at bottom */}
         <div 
           ref={chunksContainerRef}
-          className="flex-grow overflow-y-auto px-4 py-6 pb-20"
+          className="flex-grow flex flex-col justify-end overflow-y-auto px-4 py-6 pb-20"
         >
-          {/* Messages in chronological order (oldest at top, newest at bottom) */}
-          {messagePairs.map((pair) => (
-            <div key={`chunk-${pair.index}`} className="mb-6 last:mb-0">
-              <div className="text-sm text-marble-400 font-medium mb-2">
-                Chunk {pair.index + 1}
-              </div>
-              <div className="grid grid-cols-2 gap-6">
-                {/* Left column: Stream 1 */}
-                <div className="flex flex-col">
-                  <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
-                  <MessageRow
-                    isLast={false}
-                    isStreamingToolEvents={false}
-                    message={{
-                      type: MessageType.BOT,
-                      state: BotState.FULFILLED,
-                      text: pair.stream1,
-                    }}
-                    onRetry={onRetry}
-                  />
+          <div className="flex flex-col space-y-6">
+            {/* Messages in order with newest at bottom */}
+            {messagePairs.map((pair, arrayIndex) => (
+              <div 
+                key={`chunk-${pair.index}`} 
+                className={cn(
+                  "mb-6 last:mb-0",
+                  {
+                    "chunk-animate-in": arrayIndex === lastChunkIndex && isAnimating,
+                    "chunk-animate-up": arrayIndex !== lastChunkIndex && isAnimating
+                  }
+                )}
+              >
+                <div className="text-sm text-marble-400 font-medium mb-2">
+                  Chunk {pair.index + 1}
                 </div>
-        
-                {/* Right column: Stream 2 */}
-                <div className="flex flex-col">
-                  <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
-                  <MessageRow
-                    isLast={false}
-                    isStreamingToolEvents={false}
-                    message={{
-                      type: MessageType.BOT,
-                      state: BotState.FULFILLED,
-                      text: pair.stream2,
-                    }}
-                    onRetry={onRetry}
-                  />
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Left column: Stream 1 */}
+                  <div className="flex flex-col">
+                    <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
+                    <MessageRow
+                      isLast={false}
+                      isStreamingToolEvents={false}
+                      message={{
+                        type: MessageType.BOT,
+                        state: BotState.FULFILLED,
+                        text: pair.stream1,
+                      }}
+                      onRetry={onRetry}
+                    />
+                  </div>
+          
+                  {/* Right column: Stream 2 */}
+                  <div className="flex flex-col">
+                    <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
+                    <MessageRow
+                      isLast={false}
+                      isStreamingToolEvents={false}
+                      message={{
+                        type: MessageType.BOT,
+                        state: BotState.FULFILLED,
+                        text: pair.stream2,
+                      }}
+                      onRetry={onRetry}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
         
         {/* Fixed control panel at bottom */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-marble-950 bg-marble-1000 px-4 py-3 z-10 shadow-lg">
-          {/* Progress bar */}
+          {/* Progress bar with smooth transition */}
           <div className="w-full bg-marble-900 h-1 rounded-full mb-3">
             <div 
-              className="bg-blue-500 h-1 rounded-full" 
+              className="bg-blue-500 h-1 rounded-full transition-all duration-500 ease-out" 
               style={{ width: `${progress}%` }}
             />
           </div>
