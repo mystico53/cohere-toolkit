@@ -97,57 +97,54 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
 
     return (
       <div className="flex flex-col h-full relative" ref={ref}>
-        {/* Main content area - takes all available space except control panel */}
-        <div className="flex-grow overflow-hidden flex flex-col">
-          {/* Using flex-col with appropriate ordering and scroll positioning */}
-          <div 
-            ref={chunksContainerRef}
-            className="w-full overflow-y-auto px-4 py-6 pb-4 flex flex-col"
-          >
-            {/* Display chunks from oldest (top) to newest (bottom) */}
-            {messagePairs.map((pair) => (
-              <div key={`chunk-${pair.index}`} className="mb-6 last:mb-0">
-                <div className="text-sm text-marble-400 font-medium mb-2">
-                  Chunk {pair.index + 1}
+        {/* Main content area with flex-grow to take available space */}
+        <div 
+          ref={chunksContainerRef}
+          className="flex-grow overflow-y-auto px-4 py-6 pb-20" // Added extra bottom padding
+        >
+          {/* Display chunks from oldest (top) to newest (bottom) */}
+          {messagePairs.map((pair) => (
+            <div key={`chunk-${pair.index}`} className="mb-6 last:mb-0">
+              <div className="text-sm text-marble-400 font-medium mb-2">
+                Chunk {pair.index + 1}
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left column: Stream 1 */}
+                <div className="flex flex-col">
+                  <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
+                  <MessageRow
+                    isLast={false}
+                    isStreamingToolEvents={false}
+                    message={{
+                      type: MessageType.BOT,
+                      state: BotState.FULFILLED,
+                      text: pair.stream1,
+                    }}
+                    onRetry={onRetry}
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Left column: Stream 1 */}
-                  <div className="flex flex-col">
-                    <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
-                    <MessageRow
-                      isLast={false}
-                      isStreamingToolEvents={false}
-                      message={{
-                        type: MessageType.BOT,
-                        state: BotState.FULFILLED,
-                        text: pair.stream1,
-                      }}
-                      onRetry={onRetry}
-                    />
-                  </div>
-          
-                  {/* Right column: Stream 2 */}
-                  <div className="flex flex-col">
-                    <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
-                    <MessageRow
-                      isLast={false}
-                      isStreamingToolEvents={false}
-                      message={{
-                        type: MessageType.BOT,
-                        state: BotState.FULFILLED,
-                        text: pair.stream2,
-                      }}
-                      onRetry={onRetry}
-                    />
-                  </div>
+        
+                {/* Right column: Stream 2 */}
+                <div className="flex flex-col">
+                  <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
+                  <MessageRow
+                    isLast={false}
+                    isStreamingToolEvents={false}
+                    message={{
+                      type: MessageType.BOT,
+                      state: BotState.FULFILLED,
+                      text: pair.stream2,
+                    }}
+                    onRetry={onRetry}
+                  />
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
         
-        {/* Fixed control panel at bottom */}
-        <div className="sticky bottom-0 border-t border-marble-950 bg-marble-1000 px-4 py-3 z-10 shadow-lg">
+        {/* Fixed control panel at bottom with absolute positioning */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-marble-950 bg-marble-1000 px-4 py-3 z-10 shadow-lg">
           {/* Progress bar */}
           <div className="w-full bg-marble-900 h-1 rounded-full mb-3">
             <div 

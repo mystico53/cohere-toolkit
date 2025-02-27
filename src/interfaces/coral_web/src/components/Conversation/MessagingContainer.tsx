@@ -42,6 +42,26 @@ type Props = {
  */
 const MessagingContainer: React.FC<Props> = (props) => {
   const { scrollViewClassName = '', ...rest } = props;
+  const showChunkedMessages = usePersistedStore(state => state.settings.showChunkedMessages);
+  
+  // If showing chunked messages, use a different layout approach
+  if (showChunkedMessages) {
+    return (
+      <div className={cn(ReservedClasses.MESSAGES, 'relative flex h-0 flex-grow flex-col')}>
+        {/* Messages container with separate scroll area */}
+        <div className="flex-grow relative overflow-hidden">
+          <ChunkedMessages agentId={props.agentId || ''} onRetry={props.onRetry} />
+        </div>
+        
+        {/* Composer in fixed position outside of scroll area */}
+        <div className="relative z-20 bg-marble-1000 border-t border-marble-950">
+          {props.composer}
+        </div>
+      </div>
+    );
+  }
+  
+  // Default ScrollToBottom behavior for regular messages
   return (
     <ScrollToBottom
       initialScrollBehavior="auto"
