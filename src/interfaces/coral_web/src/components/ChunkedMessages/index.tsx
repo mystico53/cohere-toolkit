@@ -4,7 +4,7 @@
 import { default as ChunkedComponent } from './ChunkedMessagesComponent';
 import { default as MessageStreamColumn } from './MessageStreamColumn';
 import { default as ChunkedControlPanel } from './ChunkedControlPanel';
-//import { default as FeedbackPanel } from './FeedbackPanel';
+import { default as FeedbackPanel } from './FeedbackPanel';
 
 // Export all types from the centralized types file
 export * from './types';
@@ -13,7 +13,7 @@ export * from './types';
 export {
   MessageStreamColumn,
   ChunkedControlPanel,
-  //FeedbackPanel
+  FeedbackPanel
 };
 
 // Export the main component as default

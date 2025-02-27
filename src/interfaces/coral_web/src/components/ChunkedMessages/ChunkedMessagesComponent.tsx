@@ -6,6 +6,7 @@ import { usechunkedMessagesStore } from '@/stores/persistedStore';
 import MessageStreamColumn from './MessageStreamColumn';
 import ChunkedControlPanel from './ChunkedControlPanel';
 import useTextSelection from '@/hooks/useTextSelection';
+import FeedbackPanel from './FeedbackPanel';
 
 type ChunkedMessagesProps = {
   agentId: string; 
@@ -73,14 +74,7 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
     }, [selectedText, chunkedMessages, setSelectedText]);
     
     // Debug logging
-    useEffect(() => {
-      console.log("[DEBUG] ChunkedMessages store data:", {
-        isChunked: chunkedMessages?.isChunked,
-        chunks1: chunkedMessages?.chunks?.stream1?.length,
-        chunks2: chunkedMessages?.chunks?.stream2?.length,
-        currentIndices: chunkedMessages?.currentChunkIndices
-      });
-      
+    useEffect(() => { 
       // Auto-start feedback session if not already started
       if (chunkedMessages && !chunkedMessages.isChunked && 
           chunkedMessages?.chunks?.stream1?.length > 0) {
@@ -186,6 +180,9 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
           </div>
         </div>
         
+        {/* Feedback Panel */}
+        <FeedbackPanel />
+
         {/* Control Panel */}
         <ChunkedControlPanel
           progress={stream1Progress}
