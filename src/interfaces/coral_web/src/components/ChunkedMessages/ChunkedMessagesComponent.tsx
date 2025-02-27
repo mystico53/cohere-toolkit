@@ -149,53 +149,54 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
       (stream1Chunks.length > 0 && currentIndices.stream1 < stream1Chunks.length - 1) ||
       (stream2Chunks.length > 0 && currentIndices.stream2 < stream2Chunks.length - 1);
 
-    return (
-      <div className="flex flex-col h-full relative overflow-hidden" ref={ref}>
-        {/* Content area with explicit height to enable scrolling */}
-        <div 
-          ref={chunksContainerRef}
-          className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6 pb-20"
-          style={{ height: 'calc(100% - 60px)', scrollBehavior: 'smooth' }}
-        >
-          <div className="grid grid-cols-2 gap-6">
-            {/* Left column: Stream 1 */}
-            <MessageStreamColumn
-              streamId="stream1"
-              chunks={stream1Chunks}
-              currentIndex={currentIndices.stream1}
-              onChunkClick={() => showNextChunkForStream('stream1')}
-              onFeedbackSelect={(rating) => handleFeedback('stream1', rating)}
-              onTextSelect={handleTextSelect}
-            />
-            
-            {/* Right column: Stream 2 */}
-            <MessageStreamColumn
-              streamId="stream2"
-              chunks={stream2Chunks}
-              currentIndex={currentIndices.stream2}
-              onChunkClick={() => showNextChunkForStream('stream2')}
-              onFeedbackSelect={(rating) => handleFeedback('stream2', rating)}
-              onTextSelect={handleTextSelect}
-            />
+      return (
+        <div className="flex flex-col h-full relative overflow-hidden" ref={ref}>
+          {/* Content area with explicit height to enable scrolling */}
+          <div 
+            ref={chunksContainerRef}
+            className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6"
+            style={{ height: 'calc(100% - 140px)', scrollBehavior: 'smooth' }} // Increased to account for feedback panels
+          >
+            <div className="grid grid-cols-2 gap-6 mt-auto"> {/* mt-auto pushes content to bottom */}
+              {/* Left column: Stream 1 */}
+              <MessageStreamColumn
+                streamId="stream1"
+                chunks={stream1Chunks}
+                currentIndex={currentIndices.stream1}
+                onChunkClick={() => showNextChunkForStream('stream1')}
+                onFeedbackSelect={(rating) => handleFeedback('stream1', rating)}
+                onTextSelect={handleTextSelect}
+              />
+              
+              {/* Right column: Stream 2 */}
+              <MessageStreamColumn
+                streamId="stream2"
+                chunks={stream2Chunks}
+                currentIndex={currentIndices.stream2}
+                onChunkClick={() => showNextChunkForStream('stream2')}
+                onFeedbackSelect={(rating) => handleFeedback('stream2', rating)}
+                onTextSelect={handleTextSelect}
+              />
+            </div>
           </div>
+          
+          {/* Feedback Panels - Fixed position above control panel */}
+          <FeedbackPanel streamId="stream1" />
+          <FeedbackPanel streamId="stream2" />
+          
+          {/* Control Panel */}
+          <ChunkedControlPanel
+            progress={stream1Progress}
+            selectedText={selectedText}
+            feedbackComment={feedbackComment}
+            hasMoreChunks={hasMoreChunks}
+            onNextChunk={showNextChunk}
+            onStartOver={handleStartOver}
+            onFeedbackCommentChange={setFeedbackComment}
+            onSubmitFeedback={handleSubmitFeedback}
+          />
         </div>
-        
-        {/* Feedback Panel */}
-        <FeedbackPanel />
-
-        {/* Control Panel */}
-        <ChunkedControlPanel
-          progress={stream1Progress}
-          selectedText={selectedText}
-          feedbackComment={feedbackComment}
-          hasMoreChunks={hasMoreChunks}
-          onNextChunk={showNextChunk}
-          onStartOver={handleStartOver}
-          onFeedbackCommentChange={setFeedbackComment}
-          onSubmitFeedback={handleSubmitFeedback}
-        />
-      </div>
-    );
+      );
   }
 );
 
