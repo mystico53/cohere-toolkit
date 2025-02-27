@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usechunkedMessagesStore } from '@/stores/persistedStore';
 
 type FeedbackPanelProps = {
@@ -6,6 +6,11 @@ type FeedbackPanelProps = {
 };
 
 const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
+  // Local state for the comment input
+  const [comment, setComment] = useState('');
+  // Debug state to show when feedback is saved
+  const [debugMessage, setDebugMessage] = useState('');
+  
   // Access the store safely with defensive checks
   const store = usechunkedMessagesStore();
   
@@ -25,23 +30,66 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   
   const currentFeedback = getFeedbackSafely();
   
-  // Handle thumbs up click
+  // Initialize comment field with existing comment when chunk changes
+  useEffect(() => {
+    setComment(currentFeedback?.comment || '');
+    setDebugMessage('');
+  }, [currentChunkIndex, streamId]);
+  
+  // Handle thumbs up click with comment
   const handleThumbsUp = () => {
     if (store.recordFeedback) {
-      store.recordFeedback(streamId, currentChunkIndex, {
+      const feedback = {
         rating: 'positive',
+        comment: comment.trim(),
         timestamp: Date.now()
-      });
+      };
+      
+      store.recordFeedback(streamId, currentChunkIndex, feedback);
+      
+      // Show debug message
+      setDebugMessage(`✅ Saved positive feedback for ${streamId}, chunk ${currentChunkIndex}`);
+      console.log('Saved feedback:', { streamId, chunkIndex: currentChunkIndex, feedback });
     }
   };
   
-  // Handle thumbs down click
+  // Handle thumbs down click with comment
   const handleThumbsDown = () => {
     if (store.recordFeedback) {
-      store.recordFeedback(streamId, currentChunkIndex, {
+      const feedback = {
         rating: 'negative',
+        comment: comment.trim(),
         timestamp: Date.now()
-      });
+      };
+      
+      store.recordFeedback(streamId, currentChunkIndex, feedback);
+      
+      // Show debug message
+      setDebugMessage(`✅ Saved negative feedback for ${streamId}, chunk ${currentChunkIndex}`);
+      console.log('Saved feedback:', { streamId, chunkIndex: currentChunkIndex, feedback });
+    }
+  };
+  
+  // Handle comment changes
+  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setComment(e.target.value);
+  };
+  
+  // Save comment only (without changing rating)
+  const handleSaveComment = () => {
+    if (store.recordFeedback) {
+      // Preserve existing rating if any
+      const feedback = {
+        rating: currentFeedback?.rating,
+        comment: comment.trim(),
+        timestamp: Date.now()
+      };
+      
+      store.recordFeedback(streamId, currentChunkIndex, feedback);
+      
+      // Show debug message
+      setDebugMessage(`✅ Saved comment for ${streamId}, chunk ${currentChunkIndex}`);
+      console.log('Saved comment:', { streamId, chunkIndex: currentChunkIndex, comment: comment.trim() });
     }
   };
 
@@ -51,8 +99,9 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
         Feedback Summary for Response {streamId === 'stream1' ? '1' : '2'}
       </div>
       <div className="mt-2 text-sm flex flex-col space-y-2">
-        <div className="flex items-center">
-          <span className="mr-3">Current chunk:</span>
+        {/* Feedback controls row */}
+        <div className="flex items-center space-x-2">
+          {/* Rating buttons */}
           <div className="flex space-x-2">
             <button
               onClick={handleThumbsUp}
@@ -62,6 +111,7 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
                   : 'bg-marble-900 hover:bg-marble-800'
               }`}
               aria-label="Thumbs up"
+              title="Positive feedback"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M7 10v12"></path>
@@ -76,6 +126,7 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
                   : 'bg-marble-900 hover:bg-marble-800'
               }`}
               aria-label="Thumbs down"
+              title="Negative feedback"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 14V2"></path>
@@ -83,11 +134,44 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
               </svg>
             </button>
           </div>
+          
+          {/* Comment input field */}
+          <div className="flex-1 flex items-center space-x-2">
+            <input
+              type="text"
+              value={comment}
+              onChange={handleCommentChange}
+              placeholder="Add a comment..."
+              className="flex-1 px-3 py-1 text-sm bg-marble-900 border border-marble-800 rounded"
+            />
+            <button
+              onClick={handleSaveComment}
+              className="px-3 py-1 text-sm bg-marble-800 hover:bg-marble-700 rounded"
+              title="Save comment only"
+            >
+              Save
+            </button>
+          </div>
         </div>
         
+        {/* Feedback status display */}
         {currentFeedback?.rating && (
           <div className="text-sm text-marble-400">
-            Feedback recorded: {currentFeedback.rating === 'positive' ? 'Positive 👍' : 'Negative 👎'}
+            Rating: {currentFeedback.rating === 'positive' ? 'Positive 👍' : 'Negative 👎'}
+          </div>
+        )}
+        
+        {/* Show saved comment if any */}
+        {currentFeedback?.comment && (
+          <div className="text-sm text-marble-400">
+            Comment: "{currentFeedback.comment}"
+          </div>
+        )}
+        
+        {/* Debug message */}
+        {debugMessage && (
+          <div className="text-xs text-green-500 mt-1">
+            {debugMessage}
           </div>
         )}
       </div>
