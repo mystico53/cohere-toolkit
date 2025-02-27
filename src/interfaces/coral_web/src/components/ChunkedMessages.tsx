@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useRef, useState } from 'react';
 import MessageRow from '@/components/MessageRow';
 import { Welcome } from '@/components/Welcome';
 import { BotState, MessageType } from '@/types/message';
@@ -13,31 +13,40 @@ type ChunkedMessagesProps = {
   onRetry: () => void;
 };
 
+// Add this style to your global CSS or load it dynamically
+const globalStyle = `
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chunk-highlight {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.chunk-animate-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+`;
+
 const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
   function ChunkedMessagesInternal(props, ref) {
     const { agentId, onRetry } = props;
     const chunksContainerRef = useRef<HTMLDivElement>(null);
     
     // Get data from the chunkedMessages store
-    const { chunkedMessages, showNextChunk } = usechunkedMessagesStore();
+    const { chunkedMessages, showNextChunk, startFeedbackSession } = usechunkedMessagesStore();
     
-    // Extract data from chunkedMessages
-    const stream1Chunks = chunkedMessages?.chunks?.stream1 || [];
-    const stream2Chunks = chunkedMessages?.chunks?.stream2 || [];
+    // Track current and previous index to detect changes
     const currentIndex = chunkedMessages?.currentChunkIndex || 0;
-    
-    // Create the fallback text from chunks
-    const stream1FallbackText = stream1Chunks.slice(0, currentIndex + 1).join('') || "No content available";
-    const stream2FallbackText = stream2Chunks.slice(0, currentIndex + 1).join('') || "No content available";
-    
-    // Calculate progress
-    const totalChunks = stream1Chunks.length || 0;
-    const progress = totalChunks > 0 ? ((currentIndex + 1) / totalChunks) * 100 : 0;
-    
-    // State for tracking UI
     const [prevIndex, setPrevIndex] = useState(currentIndex);
     const [isAnimating, setIsAnimating] = useState(false);
-    const [hoveredChunk, setHoveredChunk] = useState<number | null>(null);
     
     // Helper function to scroll to the bottom
     const scrollToBottom = () => {
@@ -46,78 +55,20 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       }
     };
     
-    // Handle click on chunk
-    const handleChunkClick = (index: number) => {
-      console.log(`Chunk ${index} clicked!`);
-      alert(`You clicked chunk ${index + 1}`);
-      // Add your custom click handling logic here
-    };
-    
-    // Add global CSS styles
+    // Add styles to document on mount
     useEffect(() => {
       if (typeof document !== 'undefined') {
-        const existingStyle = document.getElementById('chunked-messages-style');
+        // Check if the style already exists to avoid duplicates
+        const existingStyle = document.getElementById('chunked-messages-animation-style');
         if (!existingStyle) {
           const styleElement = document.createElement('style');
-          styleElement.id = 'chunked-messages-style';
-          styleElement.innerHTML = `
-            @keyframes fadeIn {
-              from { opacity: 0; transform: translateY(10px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-            .chunk-animate-in {
-              animation: fadeIn 0.4s ease-out forwards;
-            }
-            .chunk {
-              display: inline;
-              padding: 4px;
-              margin: 0;
-              border-radius: 3px;
-              transition: background-color 0.2s ease;
-              cursor: pointer;
-              position: relative;
-              font-size: inherit;
-              font-family: inherit;
-              line-height: inherit;
-              font-weight: inherit;
-            }
-            .chunk.current {
-              background-color: rgba(59, 130, 246, 0.15);
-            }
-            .chunk.even:not(.current) {
-              background-color: rgba(200, 200, 200, 0.1);
-            }
-            .chunk.odd:not(.current) {
-              background-color: rgba(230, 230, 230, 0.05);
-            }
-            .chunk:hover.current {
-              background-color: rgba(59, 130, 246, 0.25);
-            }
-            .chunk:hover:not(.current) {
-              background-color: rgba(200, 200, 200, 0.2);
-            }
-            /* Hide MessageRow text but keep layout */
-            .hidden-message-content {
-              visibility: hidden;
-              position: relative;
-              user-select: none;
-            }
-            .chunk-overlay {
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              z-index: 5;
-              padding: 12px 12px 12px 48px;
-              pointer-events: auto;
-              box-sizing: border-box;
-            }
-          `;
+          styleElement.id = 'chunked-messages-animation-style';
+          styleElement.innerHTML = globalStyle;
           document.head.appendChild(styleElement);
           
+          // Clean up on unmount
           return () => {
-            const element = document.getElementById('chunked-messages-style');
+            const element = document.getElementById('chunked-messages-animation-style');
             if (element) document.head.removeChild(element);
           };
         }
@@ -127,28 +78,50 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     // Scroll to bottom when chunks are initially loaded
     useEffect(() => {
       scrollToBottom();
-    }, [stream1Chunks.length, stream2Chunks.length]);
+    }, [chunkedMessages?.chunks?.stream1?.length, chunkedMessages?.chunks?.stream2?.length]);
     
     // Scroll to bottom when current index changes
     useEffect(() => {
       scrollToBottom();
+      
+      // Also scroll after a small delay to handle any DOM updates
       const delayedScroll = setTimeout(scrollToBottom, 50);
       return () => clearTimeout(delayedScroll);
     }, [currentIndex]);
     
+    // Debug logging
+    useEffect(() => {
+      console.log("[DEBUG] ChunkedMessages store data:", {
+        isChunked: chunkedMessages?.isChunked,
+        chunks1: chunkedMessages?.chunks?.stream1?.length,
+        chunks2: chunkedMessages?.chunks?.stream2?.length,
+        currentIndex
+      });
+      
+      // Auto-start feedback session if not already started
+      if (chunkedMessages && !chunkedMessages.isChunked && 
+          chunkedMessages?.chunks?.stream1?.length > 0) {
+        console.log("[DEBUG] Auto-starting feedback session");
+        startFeedbackSession();
+      }
+    }, [chunkedMessages, startFeedbackSession, currentIndex]);
+    
     // Animate and track when new chunks appear
     useEffect(() => {
       if (currentIndex > prevIndex) {
+        // A new chunk was added
         setIsAnimating(true);
         setPrevIndex(currentIndex);
         
+        // Scroll to bottom immediately and after animation starts
         scrollToBottom();
         const animationScroll = setTimeout(scrollToBottom, 50);
         
+        // Clear animation state after animation completes
         const animationTimer = setTimeout(() => {
           setIsAnimating(false);
-          scrollToBottom();
-        }, 500);
+          scrollToBottom(); // Scroll once more after animation completes
+        }, 500); // Match this to animation duration
         
         return () => {
           clearTimeout(animationTimer);
@@ -157,7 +130,11 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       }
     }, [currentIndex, prevIndex]);
     
-    // If chunkedMessages is completely undefined, show welcome
+    // Always render even if there are no chunks yet
+    const stream1Chunks = chunkedMessages?.chunks?.stream1 || [];
+    const stream2Chunks = chunkedMessages?.chunks?.stream2 || [];
+    
+    // Show welcome only if chunkedMessages is completely undefined
     if (!chunkedMessages) {
       return (
         <div className="m-auto p-4">
@@ -166,39 +143,34 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       );
     }
     
-    // Render function for chunks
-    const renderChunks = (chunks: any[], streamName: string) => {
-      const elements = [];
-      const maxIndex = Math.min(currentIndex, chunks.length - 1);
-      
-      for (let i = 0; i <= maxIndex; i++) {
-        const chunkText = chunks[i] || '';
-        const isCurrentChunk = i === maxIndex;
-        const isEven = i % 2 === 0;
-        const isHovered = hoveredChunk === i;
-        
-        const className = [
-          'chunk',
-          isEven ? 'even' : 'odd',
-          isCurrentChunk ? 'current' : '',
-          isCurrentChunk && isAnimating ? 'chunk-animate-in' : ''
-        ].filter(Boolean).join(' ');
-        
-        elements.push(
-          <span
-            key={`${streamName}-chunk-${i}`}
-            className={className}
-            onClick={() => handleChunkClick(i)}
-            onMouseEnter={() => setHoveredChunk(i)}
-            onMouseLeave={() => setHoveredChunk(null)}
-            data-chunk-index={i}
-          >
-            {chunkText}
-          </span>
-        );
-      }
-      
-      return elements;
+    // Calculate progress
+    const totalChunks = stream1Chunks.length || 0;
+    const progress = totalChunks > 0 ? ((currentIndex + 1) / totalChunks) * 100 : 0;
+
+    // Combine all visible chunks for each stream into single strings
+    // This is more reliable than trying to use React elements
+    let stream1Text = '';
+    let stream2Text = '';
+    
+    // Include all chunks up to the current index
+    const maxIndex = Math.min(
+      currentIndex, 
+      stream1Chunks.length - 1, 
+      stream2Chunks.length - 1
+    );
+    
+    // Always show at least the first chunk if any exist
+    const endIndex = Math.max(0, maxIndex);
+    
+    for (let i = 0; i <= endIndex; i++) {
+      stream1Text += (stream1Chunks[i] || '');
+      stream2Text += (stream2Chunks[i] || '');
+    }
+
+    // Custom event handler for Next Chunk that also scrolls
+    const handleNextChunk = () => {
+      showNextChunk();
+      // Scroll will happen via the useEffect that watches currentIndex
     };
 
     return (
@@ -213,59 +185,33 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
             {/* Left column: Stream 1 */}
             <div className="flex flex-col">
               <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
-              
-              {/* Simple container with overlay for chunks */}
-              <div className="relative">
-                {/* Hidden MessageRow */}
-                <div className="hidden-message-content">
-                  <MessageRow
-                    isLast={false}
-                    isStreamingToolEvents={false}
-                    message={{
-                      type: MessageType.BOT,
-                      state: BotState.FULFILLED,
-                      text: stream1FallbackText,
-                    }}
-                    onRetry={onRetry}
-                  />
-                </div>
-                
-                {/* Visible chunks overlay */}
-                <div className="chunk-overlay">
-                  <div className="prose prose-lg prose-mushroom">
-                    {renderChunks(stream1Chunks, 'stream1')}
-                  </div>
-                </div>
-              </div>
+              {/* Single MessageRow for entire stream 1 */}
+              <MessageRow
+                isLast={false}
+                isStreamingToolEvents={false}
+                message={{
+                  type: MessageType.BOT,
+                  state: BotState.FULFILLED,
+                  text: stream1Text,
+                }}
+                onRetry={onRetry}
+              />
             </div>
     
             {/* Right column: Stream 2 */}
             <div className="flex flex-col">
               <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
-              
-              {/* Simple container with overlay for chunks */}
-              <div className="relative">
-                {/* Hidden MessageRow */}
-                <div className="hidden-message-content">
-                  <MessageRow
-                    isLast={false}
-                    isStreamingToolEvents={false}
-                    message={{
-                      type: MessageType.BOT,
-                      state: BotState.FULFILLED,
-                      text: stream2FallbackText,
-                    }}
-                    onRetry={onRetry}
-                  />
-                </div>
-                
-                {/* Visible chunks overlay */}
-                <div className="chunk-overlay">
-                  <div className="prose prose-lg prose-mushroom">
-                    {renderChunks(stream2Chunks, 'stream2')}
-                  </div>
-                </div>
-              </div>
+              {/* Single MessageRow for entire stream 2 */}
+              <MessageRow
+                isLast={false}
+                isStreamingToolEvents={false}
+                message={{
+                  type: MessageType.BOT,
+                  state: BotState.FULFILLED,
+                  text: stream2Text,
+                }}
+                onRetry={onRetry}
+              />
             </div>
           </div>
         </div>
@@ -291,7 +237,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
                 Chunk {currentIndex + 1} of {totalChunks || 1}
               </div>
               <button 
-                onClick={showNextChunk}
+                onClick={handleNextChunk}
                 disabled={totalChunks === 0 || currentIndex >= totalChunks - 1}
                 className={cn(
                   "px-3 py-1 rounded-md text-sm",
