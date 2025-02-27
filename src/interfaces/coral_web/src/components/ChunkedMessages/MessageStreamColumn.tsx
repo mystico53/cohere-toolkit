@@ -7,7 +7,7 @@ type MessageStreamColumnProps = {
   streamId: 'stream1' | 'stream2';
   chunks: string[];
   currentIndex: number;
-  onChunkClick: () => void;
+
   onFeedbackSelect: (rating: 'positive' | 'negative') => void;
   onTextSelect?: (text: string) => void
 };
@@ -16,7 +16,7 @@ const MessageStreamColumn = ({
   streamId,
   chunks,
   currentIndex,
-  onChunkClick,
+
   onTextSelect
 }: MessageStreamColumnProps) => {
   const [selectedText, setSelectedText] = useState('');
@@ -53,7 +53,6 @@ const MessageStreamColumn = ({
           "clickable-message relative",
           currentIndex < chunks.length - 1 ? "cursor-pointer" : "cursor-default"
         )}
-        onClick={onChunkClick}
         onMouseUp={handleMouseUp}
       >
         <MessageRow

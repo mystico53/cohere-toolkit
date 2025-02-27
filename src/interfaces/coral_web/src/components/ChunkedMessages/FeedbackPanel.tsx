@@ -124,6 +124,11 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
         console.log(`[${streamId} Panel] Clearing selected text`);
         store.clearSelectedText();
       }
+      
+      // Add this line to advance both streams after feedback
+      if (store.showNextChunk) {
+        store.showNextChunk();
+      }
     }
   };
   
@@ -141,6 +146,11 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
       if (store.clearSelectedText) {
         console.log(`[${streamId} Panel] Clearing selected text`);
         store.clearSelectedText();
+      }
+      
+      // Add this line to advance both streams after feedback
+      if (store.showNextChunk) {
+        store.showNextChunk();
       }
     }
   };
@@ -166,6 +176,11 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
       if (store.clearSelectedText) {
         console.log(`[${streamId} Panel] Clearing selected text`);
         store.clearSelectedText();
+      }
+      
+      // Add this line to advance both streams after feedback
+      if (store.showNextChunk) {
+        store.showNextChunk();
       }
     }
   };

@@ -74,7 +74,8 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
       setFeedbackComment('');
     };
     
-    // Handle feedback for a stream
+    // Handle feedback for a stream - We'll keep this for flexibility
+    // but the actual advancement will happen in FeedbackPanel.tsx
     const handleFeedback = (streamId: 'stream1' | 'stream2', rating: 'positive' | 'negative') => {
       const currentIndex = chunkedMessages?.currentChunkIndices?.[streamId] || 0;
       
@@ -86,6 +87,8 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
       
       clearSelectedText();
       setFeedbackComment('');
+      
+      // Removed: showNextChunk() - This will now be called from FeedbackPanel.tsx
     };
     
     // Handle submit feedback from control panel
@@ -103,6 +106,8 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
         
         clearSelectedText();
         setFeedbackComment('');
+        
+        // Removed: showNextChunk() - This will now be called from FeedbackPanel.tsx
       }
     };
     
@@ -146,9 +151,8 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
                 streamId="stream1"
                 chunks={stream1Chunks}
                 currentIndex={currentIndices.stream1}
-                onChunkClick={() => showNextChunkForStream('stream1')}
+                // Removed: onChunkClick prop to disable click advancement
                 onFeedbackSelect={(rating) => handleFeedback('stream1', rating)}
-                
               />
             </div>
             
@@ -158,9 +162,8 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
                 streamId="stream2"
                 chunks={stream2Chunks}
                 currentIndex={currentIndices.stream2}
-                onChunkClick={() => showNextChunkForStream('stream2')}
+                // Removed: onChunkClick prop to disable click advancement
                 onFeedbackSelect={(rating) => handleFeedback('stream2', rating)}
-                
               />
             </div>
           </div>
