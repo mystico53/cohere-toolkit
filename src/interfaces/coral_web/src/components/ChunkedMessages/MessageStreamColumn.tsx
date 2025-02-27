@@ -8,8 +8,8 @@ type MessageStreamColumnProps = {
   chunks: string[];
   currentIndex: number;
   onChunkClick: () => void;
-  onFeedbackSelect: (feedback: 'positive' | 'negative') => void;
-  onTextSelect: (selectedText: string) => void;
+  onFeedbackSelect: (rating: 'positive' | 'negative') => void;
+  onTextSelect?: (text: string) => void
 };
 
 const MessageStreamColumn = ({
@@ -17,7 +17,6 @@ const MessageStreamColumn = ({
   chunks,
   currentIndex,
   onChunkClick,
-  onFeedbackSelect,
   onTextSelect
 }: MessageStreamColumnProps) => {
   const [selectedText, setSelectedText] = useState('');
@@ -36,7 +35,9 @@ const MessageStreamColumn = ({
     if (selection && selection.toString()) {
       const text = selection.toString();
       setSelectedText(text);
-      onTextSelect(text);
+      if (onTextSelect) {
+        onTextSelect(text);
+      }
     }
   };
 
@@ -65,30 +66,7 @@ const MessageStreamColumn = ({
           }}
           onRetry={() => {}}
         />
-        
-        {/* Inline feedback buttons */}
-        <div className="absolute right-2 top-2 flex space-x-2 opacity-70 hover:opacity-100">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFeedbackSelect('positive');
-            }}
-            className="p-1 bg-green-500 rounded-full text-white"
-            title="Positive feedback"
-          >
-            👍
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFeedbackSelect('negative');
-            }}
-            className="p-1 bg-red-500 rounded-full text-white"
-            title="Negative feedback"
-          >
-            👎
-          </button>
-        </div>
+      
       </div>
       
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usechunkedMessagesStore } from '@/stores/persistedStore';
 
 type FeedbackPanelProps = {
@@ -6,6 +6,9 @@ type FeedbackPanelProps = {
 };
 
 const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
+  // Add ref for panel
+  const panelRef = useRef<HTMLDivElement>(null);
+  
   // Local state for the comment input
   const [comment, setComment] = useState('');
   // Debug state to show when feedback is saved
@@ -21,6 +24,35 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   
   // Safely get the current chunk index with a fallback to 0
   const currentChunkIndex = store.chunkedMessages?.currentChunkIndices?.[streamId] ?? 0;
+  
+  // Add text selection handling
+  useEffect(() => {
+    const handleMouseUp = () => {
+      const selection = window.getSelection();
+      if (!selection || !selection.toString().trim()) return;
+      
+      // Get the selection text
+      const text = selection.toString().trim();
+      
+      // Determine if the selection is in this stream's half of the screen
+      const selectionRect = selection.getRangeAt(0).getBoundingClientRect();
+      const middleOfScreen = window.innerWidth / 2;
+      
+      const isInThisStream = 
+        (streamId === 'stream1' && selectionRect.left < middleOfScreen) ||
+        (streamId === 'stream2' && selectionRect.right >= middleOfScreen);
+      
+      if (isInThisStream && store.setSelectedText) {
+        console.log(`[${streamId} Panel] Selection detected:`, text);
+        store.setSelectedText(text, streamId, currentChunkIndex);
+      }
+    };
+    
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [streamId, currentChunkIndex, store]);
   
   // Debug logging for data flow
   useEffect(() => {
@@ -139,7 +171,10 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   };
 
   return (
-    <div className={`absolute bottom-[60px] ${position} border-t border-marble-950 bg-marble-1000 px-4 py-3 z-9`}>
+    <div 
+      ref={panelRef}
+      className={`absolute bottom-[60px] ${position} border-t border-marble-950 bg-marble-1000 px-4 py-3 z-9`}
+    >
       <div className="text-sm font-medium text-marble-400 flex justify-between items-center">
         <span>Feedback Summary for Response {streamId === 'stream1' ? '1' : '2'}</span>
         <span className="text-xs text-marble-500">

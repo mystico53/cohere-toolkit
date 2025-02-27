@@ -148,6 +148,7 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
                 currentIndex={currentIndices.stream1}
                 onChunkClick={() => showNextChunkForStream('stream1')}
                 onFeedbackSelect={(rating) => handleFeedback('stream1', rating)}
+                
               />
             </div>
             
@@ -159,6 +160,7 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
                 currentIndex={currentIndices.stream2}
                 onChunkClick={() => showNextChunkForStream('stream2')}
                 onFeedbackSelect={(rating) => handleFeedback('stream2', rating)}
+                
               />
             </div>
           </div>
@@ -171,13 +173,9 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
         {/* Control Panel */}
         <ChunkedControlPanel
           progress={stream1Progress}
-          selectedText={chunkedMessages.selectedText || ''}
-          feedbackComment={feedbackComment}
           hasMoreChunks={hasMoreChunks}
           onNextChunk={showNextChunk}
           onStartOver={handleStartOver}
-          onFeedbackCommentChange={setFeedbackComment}
-          onSubmitFeedback={handleSubmitFeedback}
         />
       </div>
     );
