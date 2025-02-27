@@ -146,7 +146,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       if (chunkedMessages && !chunkedMessages.isChunked && 
           chunkedMessages?.chunks?.stream1?.length > 0) {
         console.log("[DEBUG] Auto-starting feedback session");
-        //startFeedbackSession();
+        startFeedbackSession();
       }
     }, [chunkedMessages, startFeedbackSession, currentIndices]);
     

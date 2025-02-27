@@ -13,12 +13,14 @@ import { ShowChunkedMessagesToggle } from './ShowChunkedMessagesToggle';
  * @description Settings tab to adjust endpoint params like preamble and temperature.
  */
 export const SettingsTab: React.FC = () => {
+  
   const {
     params: { deployment, temperature, preamble, model },
     setParams,
   } = useParamsStore();
   const defaults = useSettingsDefaults();
   const { models } = useModels(deployment ?? '');
+  console.log('Available models:', models.map(m => m));
   const modelOptions = [
     {
       options: models.map((model) => ({

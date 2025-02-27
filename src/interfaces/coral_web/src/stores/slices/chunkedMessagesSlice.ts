@@ -78,15 +78,28 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
   chunkedMessages: INITIAL_STATE,
   
   startFeedbackSession: () => {
-    set({
-      chunkedMessages: {
-        ...INITIAL_STATE,
-        isChunked: true,
-        currentChunkIndices: {
-          stream1: 0,
-          stream2: 0
+    set((state) => {
+      // Instead of using INITIAL_STATE which resets everything,
+      // preserve the existing chunks and responses but reset the feedback
+      return {
+        chunkedMessages: {
+          ...state.chunkedMessages,
+          isChunked: true,
+          currentChunkIndices: {
+            stream1: 0,
+            stream2: 0
+          },
+          // Create fresh feedback arrays based on current chunk counts
+          feedback: {
+            stream1: Array(state.chunkedMessages?.chunks?.stream1?.length || 0)
+              .fill(null)
+              .map(() => ({})),
+            stream2: Array(state.chunkedMessages?.chunks?.stream2?.length || 0)
+              .fill(null)
+              .map(() => ({}))
+          }
         }
-      }
+      };
     });
   },
   
@@ -135,7 +148,7 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
           
           // Add ellipsis if this isn't the last chunk and we're not at the end of the text
           if (i + maxChunkSize < text.length) {
-            chunks.push(chunk + '...');
+            chunks.push(chunk);
           } else {
             chunks.push(chunk);
           }

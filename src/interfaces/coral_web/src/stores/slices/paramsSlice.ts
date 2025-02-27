@@ -6,7 +6,7 @@ import { isDefaultFileLoaderTool } from '@/utils';
 import { StoreState } from '..';
 
 const INITIAL_STATE: ConfigurableParams = {
-  model: undefined,
+  model: 'c4ai-aya-expanse-32b',
   temperature: DEFAULT_CHAT_TEMPERATURE,
   preamble: '',
   tools: [],

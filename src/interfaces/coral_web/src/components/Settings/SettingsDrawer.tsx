@@ -58,15 +58,15 @@ export const SettingsDrawer: React.FC = () => {
           ];
     }
     return files.length > 0 && conversationId
-      ? [
-          { name: STRINGS.tools, component: <ToolsTab /> },
-          { name: STRINGS.files, component: <FilesTab /> },
-          { name: STRINGS.settings, component: <SettingsTab /> },
-        ]
-      : [
-          { name: STRINGS.tools, component: <ToolsTab /> },
-          { name: STRINGS.settings, component: <SettingsTab /> },
-        ];
+    ? [
+        { name: STRINGS.settings, component: <SettingsTab /> },
+        { name: STRINGS.files, component: <FilesTab /> },
+        { name: STRINGS.tools, component: <ToolsTab /> },
+      ]
+    : [
+        { name: STRINGS.settings, component: <SettingsTab /> },
+        { name: STRINGS.tools, component: <ToolsTab /> },
+      ];
   }, [files.length, conversationId, agent?.tools]);
 
   return (

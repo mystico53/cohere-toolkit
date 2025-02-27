@@ -45,12 +45,17 @@ const SUGGESTED_PROMPTS: Prompt[] = [
 type Props = {
   isFirstTurn: boolean;
   onSuggestionClick: (message: string, overrides?: Partial<ConfigurableParams>) => void;
+  showSuggestions?: boolean; // Add this optional prop
 };
 
 /**
  * @description Shows clickable suggestions for the user's first turn in the conversation.
  */
-export const FirstTurnSuggestions: React.FC<Props> = ({ isFirstTurn, onSuggestionClick }) => {
+export const FirstTurnSuggestions: React.FC<Props> = ({ 
+  isFirstTurn, 
+  onSuggestionClick,
+  showSuggestions = false // Default to false to turn off suggestions
+}) => {
   const { data } = useListTools();
   const { setParams } = useParamsStore();
 
@@ -72,10 +77,11 @@ export const FirstTurnSuggestions: React.FC<Props> = ({ isFirstTurn, onSuggestio
     }
   };
 
+  // Only show if explicitly enabled via the showSuggestions prop
   return (
     <Transition
-      show={isFirstTurn}
-      className={cn('flex overflow-x-auto py-2', { hidden: !isFirstTurn })}
+      show={isFirstTurn && showSuggestions}
+      className={cn('flex overflow-x-auto py-2', { hidden: !isFirstTurn || !showSuggestions })}
       enterFrom="opacity-0"
       enterTo="opacity-100"
       enter="transition-opacity duration-300"
