@@ -105,143 +105,145 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     get().createChunks();
   },
   
-  createChunks: (targetChunkSize = 300) => {
+  createChunks: (maxChunkSize = 600) => { // 600 chars max
     set((state) => {
       const { stream1, stream2 } = state.chunkedMessages.responses;
       
-      // Find natural break points in text (paragraphs, sentences, bullet points)
-      const findBreakPoints = (text: string): number[] => {
-        const breakPoints: number[] = [];
-        
-        // Add paragraph breaks (double newlines)
-        let index = text.indexOf('\n\n');
-        while (index !== -1) {
-          breakPoints.push(index + 2); // Include both newlines
-          index = text.indexOf('\n\n', index + 1);
-        }
-        
-        // Add bullet point breaks
-        const bulletPointRegex = /\n[•*-] /g;
-        let match: RegExpExecArray | null;
-        while ((match = bulletPointRegex.exec(text)) !== null) {
-          // Only add if not already in breakpoints (avoid duplicates with paragraph breaks)
-          if (!breakPoints.includes(match.index)) {
-            breakPoints.push(match.index);
-          }
-        }
-        
-        // Add sentence breaks (periods, question marks, exclamation points followed by space or newline)
-        const sentenceRegex = /[.!?](\s|$)/g;
-        while ((match = sentenceRegex.exec(text)) !== null) {
-          if (!breakPoints.includes(match.index + 1)) {
-            breakPoints.push(match.index + 1);
-          }
-        }
-        
-        // Sort breakpoints in ascending order
-        breakPoints.sort((a, b) => a - b);
-        
-        return breakPoints;
-      };
-      
-      // Create chunks based on natural break points while targeting a size
-      const createSmartChunks = (text: string, targetSize: number, breakPoints: number[]): string[] => {
+      // Function to chunk text while preserving paragraph integrity
+      const createTextChunks = (text: string): string[] => {
         const chunks: string[] = [];
-        let startIndex = 0;
         
-        // If no break points, fall back to character chunking
-        if (breakPoints.length === 0) {
-          for (let i = 0; i < text.length; i += targetSize) {
-            chunks.push(text.substring(i, Math.min(i + targetSize, text.length)));
-          }
-          return chunks;
-        }
+        // Split text into blocks - consider both regular paragraphs and bullet points
+        // This regex splits on double newlines OR on newline followed by bullet indicator
+        const blocks = text.split(/\n\n+|\n(?=[•*-] )/);
         
-        // Create chunks based on natural break points
-        while (startIndex < text.length) {
-          // Find best break point within target range
-          let bestBreakPoint = -1;
-          let closest = Number.MAX_VALUE;
+        let currentChunk = '';
+        let currentChunkSize = 0;
+        
+        // Helper to check if text contains a heading
+        const isHeading = (text: string): boolean => {
+          // Look for patterns like "Heading:" at the start of a line
+          return /^[A-Z][a-zA-Z]*:/.test(text.trim());
+        };
+        
+        // Process each block
+        for (let i = 0; i < blocks.length; i++) {
+          const block = blocks[i].trim();
+          if (!block) continue; // Skip empty blocks
           
-          for (const breakPoint of breakPoints) {
-            if (breakPoint > startIndex) {
-              const chunkSize = breakPoint - startIndex;
+          // Check if this block is a heading
+          const blockIsHeading = isHeading(block);
+          
+          // Check if this block is a bullet point
+          const isBulletPoint = /^[•*-] /.test(block);
+          
+          // Add leading newlines if needed
+          const blockWithSpacing = currentChunk ? '\n\n' + block : block;
+          const blockSize = blockWithSpacing.length;
+          
+          // Start a new chunk if:
+          // 1. Adding this block would exceed the max size and we already have content, OR
+          // 2. This block is a heading and we already have content
+          if ((currentChunk && currentChunkSize + blockSize > maxChunkSize) || 
+              (blockIsHeading && currentChunk)) {
+            chunks.push(currentChunk);
+            currentChunk = block;
+            currentChunkSize = block.length;
+          } 
+          // Handle case where a single block is longer than max size
+          else if (!currentChunk && blockSize > maxChunkSize) {
+            // If it's a bullet point or heading, keep it together anyway
+            if (isBulletPoint || blockIsHeading) {
+              chunks.push(block);
+            } else {
+              // Split into sentences if possible
+              const sentences = block.split(/(?<=\. )/);
+              let sentenceChunk = '';
               
-              // Check if this break point is closer to our target size
-              if (Math.abs(chunkSize - targetSize) < closest) {
-                closest = Math.abs(chunkSize - targetSize);
-                bestBreakPoint = breakPoint;
+              for (const sentence of sentences) {
+                if (sentenceChunk.length + sentence.length > maxChunkSize) {
+                  if (sentenceChunk) {
+                    chunks.push(sentenceChunk);
+                    sentenceChunk = sentence;
+                  } else {
+                    // If a single sentence is too long, we have to split it
+                    chunks.push(sentence);
+                  }
+                } else {
+                  sentenceChunk += sentence;
+                }
               }
               
-              // If we're already past our target size, we can stop looking
-              if (chunkSize > targetSize && bestBreakPoint !== -1) {
-                break;
+              if (sentenceChunk) {
+                chunks.push(sentenceChunk);
               }
             }
+            
+            // Reset current chunk to empty
+            currentChunk = '';
+            currentChunkSize = 0;
+          } 
+          // Normal case: add to current chunk
+          else {
+            currentChunk += blockWithSpacing;
+            currentChunkSize += blockSize;
           }
-          
-          // If no suitable break point found, use target size or end of text
-          if (bestBreakPoint === -1) {
-            bestBreakPoint = Math.min(startIndex + targetSize, text.length);
-          }
-          
-          // Add chunk
-          chunks.push(text.substring(startIndex, bestBreakPoint));
-          startIndex = bestBreakPoint;
         }
         
-        return chunks;
-      };
-      
-      // Balance chunks between two streams
-      const balanceChunks = (chunks1: string[], chunks2: string[]): [string[], string[]] => {
-        const maxChunks = Math.max(chunks1.length, chunks2.length);
-        const balanced1: string[] = [];
-        const balanced2: string[] = [];
-        
-        // If one stream has more chunks, we need to combine some chunks in the longer stream
-        if (chunks1.length === chunks2.length) {
-          return [chunks1, chunks2];
+        // Add the final chunk if there's anything left
+        if (currentChunk) {
+          chunks.push(currentChunk);
         }
         
-        // Determine which stream has more chunks
-        const [longer, shorter] = chunks1.length > chunks2.length 
-          ? [chunks1, chunks2] 
-          : [chunks2, chunks1];
+        // Now let's process and balance bullet points
+        // For each chunk, check if it contains bullet points
+        const balancedChunks: string[] = [];
         
-        // Calculate how many chunks from the longer stream should go into each balanced chunk
-        const ratio = longer.length / shorter.length;
-        
-        // Create balanced chunks
-        for (let i = 0; i < shorter.length; i++) {
-          const startIdx = Math.floor(i * ratio);
-          const endIdx = Math.floor((i + 1) * ratio);
-          
-          // Combine multiple chunks from longer stream if needed
-          const combinedChunk = longer.slice(startIdx, endIdx).join('');
-          
-          if (chunks1.length > chunks2.length) {
-            balanced1.push(combinedChunk);
-            balanced2.push(shorter[i]);
+        for (const chunk of chunks) {
+          // If chunk is larger than max size and contains multiple bullet points
+          if (chunk.length > maxChunkSize && chunk.match(/\n[•*-] /g)?.length > 1) {
+            // Split at bullet points
+            const bulletPoints = chunk.split(/(?=\n[•*-] )/);
+            
+            // First item may not start with a newline and bullet
+            if (!bulletPoints[0].match(/^[•*-] /)) {
+              // If first item is a heading + bullet, keep them together
+              if (isHeading(bulletPoints[0])) {
+                // Add the heading to the first bullet point
+                if (bulletPoints.length > 1) {
+                  bulletPoints[1] = bulletPoints[0] + bulletPoints[1];
+                  bulletPoints.shift();
+                }
+              }
+            }
+            
+            let subChunk = '';
+            for (const bullet of bulletPoints) {
+              // If adding this bullet would exceed max size, start a new chunk
+              if (subChunk && subChunk.length + bullet.length > maxChunkSize) {
+                balancedChunks.push(subChunk);
+                subChunk = bullet;
+              } else {
+                subChunk += subChunk ? bullet : bullet;
+              }
+            }
+            
+            // Add any remaining content
+            if (subChunk) {
+              balancedChunks.push(subChunk);
+            }
           } else {
-            balanced1.push(shorter[i]);
-            balanced2.push(combinedChunk);
+            // Regular chunk, no special handling needed
+            balancedChunks.push(chunk);
           }
         }
         
-        return [balanced1, balanced2];
+        return balancedChunks;
       };
       
-      // Find break points in both streams
-      const breakPoints1 = findBreakPoints(stream1);
-      const breakPoints2 = findBreakPoints(stream2);
-      
-      // Create initial chunks based on natural break points
-      let stream1Chunks = createSmartChunks(stream1, targetChunkSize, breakPoints1);
-      let stream2Chunks = createSmartChunks(stream2, targetChunkSize, breakPoints2);
-      
-      // Balance chunks between streams
-      [stream1Chunks, stream2Chunks] = balanceChunks(stream1Chunks, stream2Chunks);
+      // Create chunks for each stream
+      const stream1Chunks = createTextChunks(stream1);
+      const stream2Chunks = createTextChunks(stream2);
       
       // Create empty feedback slots for each chunk
       const createEmptyFeedback = (count: number) => {
@@ -288,8 +290,57 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
   showNextChunk: () => {
     set((state) => {
       const nextIndex = state.chunkedMessages.currentChunkIndex + 1;
-      const maxIndex = state.chunkedMessages.chunks.stream1.length - 1;
+      const stream1MaxIndex = state.chunkedMessages.chunks.stream1.length - 1;
+      const stream2MaxIndex = state.chunkedMessages.chunks.stream2.length - 1;
       
+      // If we've reached the end of one stream but not the other,
+      // combine all remaining chunks of the longer stream into one big chunk
+      if (nextIndex > stream1MaxIndex || nextIndex > stream2MaxIndex) {
+        // Only do this operation if we haven't already done it
+        const stream1Chunks = [...state.chunkedMessages.chunks.stream1];
+        const stream2Chunks = [...state.chunkedMessages.chunks.stream2];
+        
+        // Determine which stream is longer (if any)
+        if (stream1MaxIndex > nextIndex && stream1MaxIndex > stream2MaxIndex) {
+          // Stream 1 has more chunks
+          const combinedChunk = stream1Chunks.slice(nextIndex).join('');
+          stream1Chunks.splice(nextIndex, stream1Chunks.length - nextIndex, combinedChunk);
+        } else if (stream2MaxIndex > nextIndex && stream2MaxIndex > stream1MaxIndex) {
+          // Stream 2 has more chunks
+          const combinedChunk = stream2Chunks.slice(nextIndex).join('');
+          stream2Chunks.splice(nextIndex, stream2Chunks.length - nextIndex, combinedChunk);
+        }
+        
+        // Update feedback arrays to match the new chunk counts
+        const updatedFeedback1 = state.chunkedMessages.feedback.stream1.slice(0, stream1Chunks.length);
+        const updatedFeedback2 = state.chunkedMessages.feedback.stream2.slice(0, stream2Chunks.length);
+        
+        // Make sure we have feedback slots for all chunks
+        while (updatedFeedback1.length < stream1Chunks.length) {
+          updatedFeedback1.push({});
+        }
+        while (updatedFeedback2.length < stream2Chunks.length) {
+          updatedFeedback2.push({});
+        }
+        
+        return {
+          chunkedMessages: {
+            ...state.chunkedMessages,
+            chunks: {
+              stream1: stream1Chunks,
+              stream2: stream2Chunks,
+            },
+            feedback: {
+              stream1: updatedFeedback1,
+              stream2: updatedFeedback2,
+            },
+            currentChunkIndex: nextIndex
+          }
+        };
+      }
+      
+      // Otherwise, just move to the next chunk
+      const maxIndex = Math.max(stream1MaxIndex, stream2MaxIndex);
       return {
         chunkedMessages: {
           ...state.chunkedMessages,
