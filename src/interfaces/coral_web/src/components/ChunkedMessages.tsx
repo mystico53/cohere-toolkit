@@ -6,6 +6,7 @@ import { Welcome } from '@/components/Welcome';
 import { BotState, MessageType } from '@/types/message';
 import { cn } from '@/utils';
 import { usechunkedMessagesStore } from '@/stores/persistedStore';
+import StreamLoadingIndicator from './ChunkedMessagesStreamIndicator';
 
 type ChunkedMessagesProps = {
   agentId: string; 
@@ -268,26 +269,30 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
           </div>
           
           {/* Navigation controls */}
-          <div className="flex items-center justify-between">
-            <div className="text-lg font-medium">Message Chunks</div>
-            <div className="flex items-center gap-2">
-              <div className="text-sm text-marble-400">
-                Chunk {currentIndex + 1} of {totalChunks}
-              </div>
-              <button 
-                onClick={handleNextChunk}
-                disabled={currentIndex >= totalChunks - 1}
-                className={cn(
-                  "px-3 py-1 rounded-md text-sm",
-                  currentIndex >= totalChunks - 1 
-                    ? "bg-marble-800 text-marble-500 cursor-not-allowed" 
-                    : "bg-marble-800 hover:bg-marble-700 text-white"
-                )}
-              >
-                Next Chunk
-              </button>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <div className="text-lg font-medium">Message Chunks</div>
+                    {/* Import and use the StreamLoadingIndicator component */}
+                    <StreamLoadingIndicator />
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="text-sm text-marble-400">
+                    Chunk {currentIndex + 1} of {totalChunks}
+                    </div>
+                    <button 
+                    onClick={handleNextChunk}
+                    disabled={currentIndex >= totalChunks - 1}
+                    className={cn(
+                        "px-3 py-1 rounded-md text-sm",
+                        currentIndex >= totalChunks - 1 
+                        ? "bg-marble-800 text-marble-500 cursor-not-allowed" 
+                        : "bg-marble-800 hover:bg-marble-700 text-white"
+                    )}
+                    >
+                    Next Chunk
+                    </button>
+                </div>
             </div>
-          </div>
         </div>
       </div>
     );
