@@ -13,13 +13,6 @@ type ChunkedMessagesProps = {
   onRetry: () => void;
 };
 
-// Interface for message chunk pairs
-interface MessagePair {
-  index: number;
-  stream1: string;
-  stream2: string;
-}
-
 // Add this style to your global CSS or load it dynamically
 const globalStyle = `
 @keyframes fadeIn {
@@ -33,21 +26,12 @@ const globalStyle = `
   }
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-15px);
-  }
+.chunk-highlight {
+  background-color: rgba(59, 130, 246, 0.05);
 }
 
 .chunk-animate-in {
   animation: fadeIn 0.4s ease-out forwards;
-}
-
-.chunk-animate-up {
-  animation: slideUp 0.4s ease-out forwards;
 }
 `;
 
@@ -93,9 +77,7 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     
     // Scroll to bottom when chunks are initially loaded
     useEffect(() => {
-      if (hasChunks) {
-        scrollToBottom();
-      }
+      scrollToBottom();
     }, [chunkedMessages?.chunks?.stream1?.length, chunkedMessages?.chunks?.stream2?.length]);
     
     // Scroll to bottom when current index changes
@@ -148,49 +130,42 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       }
     }, [currentIndex, prevIndex]);
     
-    // Modified check: only care if there are actual chunks
-    const hasChunks = chunkedMessages?.chunks?.stream1?.length > 0 && 
-                     chunkedMessages?.chunks?.stream2?.length > 0;
+    // Always render even if there are no chunks yet
+    const stream1Chunks = chunkedMessages?.chunks?.stream1 || [];
+    const stream2Chunks = chunkedMessages?.chunks?.stream2 || [];
     
-    // If no chunks or chunkedMessages is undefined, show welcome screen
-    if (!chunkedMessages || !hasChunks) {
+    // Show welcome only if chunkedMessages is completely undefined
+    if (!chunkedMessages) {
       return (
         <div className="m-auto p-4">
-          <div className="p-4 mb-4 bg-blue-900 text-white rounded">
-            <div className="font-bold">Debug Info:</div>
-            <div>Chunked Messages State: {chunkedMessages ? "Available" : "Undefined"}</div>
-            <div>Has Chunks: {hasChunks ? "Yes" : "No"}</div>
-            {chunkedMessages && (
-              <div>
-                Stream1 Chunks: {chunkedMessages?.chunks?.stream1?.length || 0},
-                Stream2 Chunks: {chunkedMessages?.chunks?.stream2?.length || 0}
-              </div>
-            )}
-          </div>
           <Welcome show={true} agentId={agentId} />
         </div>
       );
     }
     
     // Calculate progress
-    const totalChunks = chunkedMessages.chunks?.stream1?.length || 0;
+    const totalChunks = stream1Chunks.length || 0;
     const progress = totalChunks > 0 ? ((currentIndex + 1) / totalChunks) * 100 : 0;
 
-    // Generate message pairs in chronological order
-    const messagePairs: MessagePair[] = [];
-    for (let i = 0; i <= currentIndex; i++) {
-      const chunk1 = chunkedMessages.chunks?.stream1?.[i] || '';
-      const chunk2 = chunkedMessages.chunks?.stream2?.[i] || '';
-      
-      messagePairs.push({
-        index: i,
-        stream1: chunk1,
-        stream2: chunk2
-      });
-    }
+    // Combine all visible chunks for each stream into single strings
+    // This is more reliable than trying to use React elements
+    let stream1Text = '';
+    let stream2Text = '';
     
-    // Determine the index of the latest chunk
-    const lastChunkIndex = messagePairs.length - 1;
+    // Include all chunks up to the current index
+    const maxIndex = Math.min(
+      currentIndex, 
+      stream1Chunks.length - 1, 
+      stream2Chunks.length - 1
+    );
+    
+    // Always show at least the first chunk if any exist
+    const endIndex = Math.max(0, maxIndex);
+    
+    for (let i = 0; i <= endIndex; i++) {
+      stream1Text += (stream1Chunks[i] || '');
+      stream2Text += (stream2Chunks[i] || '');
+    }
 
     // Custom event handler for Next Chunk that also scrolls
     const handleNextChunk = () => {
@@ -206,55 +181,38 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
           className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6 pb-20"
           style={{ height: 'calc(100% - 60px)', scrollBehavior: 'smooth' }}
         >
-          <div className="flex flex-col space-y-6">
-            {/* Messages in order */}
-            {messagePairs.map((pair, arrayIndex) => (
-              <div 
-                key={`chunk-${pair.index}`} 
-                className={cn(
-                  "mb-6 last:mb-0",
-                  {
-                    "chunk-animate-in": arrayIndex === lastChunkIndex && isAnimating,
-                    "chunk-animate-up": arrayIndex !== lastChunkIndex && isAnimating
-                  }
-                )}
-              >
-                <div className="text-sm text-marble-400 font-medium mb-2">
-                  Chunk {pair.index + 1}
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Left column: Stream 1 */}
-                  <div className="flex flex-col">
-                    <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
-                    <MessageRow
-                      isLast={false}
-                      isStreamingToolEvents={false}
-                      message={{
-                        type: MessageType.BOT,
-                        state: BotState.FULFILLED,
-                        text: pair.stream1,
-                      }}
-                      onRetry={onRetry}
-                    />
-                  </div>
-          
-                  {/* Right column: Stream 2 */}
-                  <div className="flex flex-col">
-                    <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
-                    <MessageRow
-                      isLast={false}
-                      isStreamingToolEvents={false}
-                      message={{
-                        type: MessageType.BOT,
-                        state: BotState.FULFILLED,
-                        text: pair.stream2,
-                      }}
-                      onRetry={onRetry}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left column: Stream 1 */}
+            <div className="flex flex-col">
+              <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
+              {/* Single MessageRow for entire stream 1 */}
+              <MessageRow
+                isLast={false}
+                isStreamingToolEvents={false}
+                message={{
+                  type: MessageType.BOT,
+                  state: BotState.FULFILLED,
+                  text: stream1Text,
+                }}
+                onRetry={onRetry}
+              />
+            </div>
+    
+            {/* Right column: Stream 2 */}
+            <div className="flex flex-col">
+              <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
+              {/* Single MessageRow for entire stream 2 */}
+              <MessageRow
+                isLast={false}
+                isStreamingToolEvents={false}
+                message={{
+                  type: MessageType.BOT,
+                  state: BotState.FULFILLED,
+                  text: stream2Text,
+                }}
+                onRetry={onRetry}
+              />
+            </div>
           </div>
         </div>
         
@@ -269,30 +227,29 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
           </div>
           
           {/* Navigation controls */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className="text-lg font-medium">Message Chunks</div>
-                    {/* Import and use the StreamLoadingIndicator component */}
-                    <StreamLoadingIndicator />
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="text-sm text-marble-400">
-                    Chunk {currentIndex + 1} of {totalChunks}
-                    </div>
-                    <button 
-                    onClick={handleNextChunk}
-                    disabled={currentIndex >= totalChunks - 1}
-                    className={cn(
-                        "px-3 py-1 rounded-md text-sm",
-                        currentIndex >= totalChunks - 1 
-                        ? "bg-marble-800 text-marble-500 cursor-not-allowed" 
-                        : "bg-marble-800 hover:bg-marble-700 text-white"
-                    )}
-                    >
-                    Next Chunk
-                    </button>
-                </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="text-lg font-medium">Message Chunks</div>
+              <StreamLoadingIndicator />
             </div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-marble-400">
+                Chunk {currentIndex + 1} of {totalChunks || 1}
+              </div>
+              <button 
+                onClick={handleNextChunk}
+                disabled={totalChunks === 0 || currentIndex >= totalChunks - 1}
+                className={cn(
+                  "px-3 py-1 rounded-md text-sm",
+                  totalChunks === 0 || currentIndex >= totalChunks - 1
+                    ? "bg-marble-800 text-marble-500 cursor-not-allowed" 
+                    : "bg-marble-800 hover:bg-marble-700 text-white"
+                )}
+              >
+                Next Chunk
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
