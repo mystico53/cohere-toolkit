@@ -56,12 +56,10 @@ const StreamLoadingIndicator = () => {
   const pages = (displayCharCount / 3000).toFixed(2);
   
   // Calculate reading time (1 page per minute)
-  const readingTimeMinutes = Math.round(parseFloat(pages));
-  const readingTimeDisplay = readingTimeMinutes === 0 
-    ? "< 1 min" 
-    : readingTimeMinutes === 1 
-      ? "~1 min" 
-      : `~${readingTimeMinutes} mins`;
+  const readingTimeMinutes = parseFloat(pages).toFixed(1);
+  const readingTimeDisplay = parseFloat(readingTimeMinutes) < 0.1
+    ? "< 0.1 min" 
+    : `~${readingTimeMinutes} ${parseFloat(readingTimeMinutes) === 1 ? "min" : "mins"}`;
   
   return (
     <div className="ml-3 text-sm bg-marble-800 px-2 py-1 rounded-md text-blue-300 animate-pulse">
