@@ -74,6 +74,8 @@ export const usechunkedMessagesStore = () => {
       resetFeedbackSession: state.resetFeedbackSession,
       recordFeedback: state.recordFeedback,
       resetEverything: state.resetEverything,
+      setSelectedText: state.setSelectedText,        
+      clearSelectedText: state.clearSelectedText,    
     }),
     shallow
   );

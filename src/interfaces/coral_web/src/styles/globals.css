@@ -36,3 +36,24 @@ body {
     font-variant-ligatures: 'common-ligatures';
   }
 }
+
+/* Text selection styles for chunked messages mode */
+.selectable-text {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  cursor: text !important;
+}
+
+/* Override selection styles in chunked mode */
+.selectable-text::selection {
+  background-color: rgba(59, 130, 246, 0.5) !important; /* Blue highlight */
+  color: white !important;
+}
+
+/* Make sure selection works in containers */
+.selectable-container {
+  position: relative;
+  pointer-events: auto;
+}

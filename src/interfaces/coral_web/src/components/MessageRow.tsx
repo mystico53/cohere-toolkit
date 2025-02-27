@@ -21,6 +21,7 @@ import { STRINGS } from '@/constants/strings';
 import { Breakpoint, useBreakpoint } from '@/hooks/breakpoint';
 import { getMessageRowId } from '@/hooks/citations';
 import { useCitationsStore } from '@/stores';
+// Remove the incorrect import for useStore
 import {
   type ChatMessage,
   isAbortedMessage,
@@ -54,6 +55,10 @@ const MessageRow = forwardRef<HTMLDivElement, Props>(function MessageRowInternal
   const [isShowing, setIsShowing] = useState(false);
   const [isLongPressMenuOpen, setIsLongPressMenuOpen] = useState(false);
   const [isStepsExpanded, setIsStepsExpanded] = useState<boolean>(true);
+  
+  // For now, let's just make text selectable by default without the settings check
+  const enableTextSelection = true;
+  
   const {
     citations: { selectedCitation, hoveredGenerationId },
     hoverCitation,
@@ -90,7 +95,8 @@ const MessageRow = forwardRef<HTMLDivElement, Props>(function MessageRowInternal
   const prevSelectedCitationGenId = usePreviousDistinct(selectedCitation?.generationId);
 
   useEffect(() => {
-    if (isFulfilledOrTypingMessage(message) && message.citations && message.generationId) {
+    // Only enable highlighting if text selection is NOT enabled
+    if (!enableTextSelection && isFulfilledOrTypingMessage(message) && message.citations && message.generationId) {
       if (
         selectedCitation?.generationId === message.generationId &&
         prevSelectedCitationGenId !== message.generationId
@@ -102,18 +108,19 @@ const MessageRow = forwardRef<HTMLDivElement, Props>(function MessageRowInternal
         }, 1000);
       }
     }
-  }, [selectedCitation?.generationId, prevSelectedCitationGenId]);
+  }, [selectedCitation?.generationId, prevSelectedCitationGenId, enableTextSelection, message]);
 
   if (delay && !isShowing) return null;
 
+  // Only attach mouse handlers if text selection is NOT enabled
   const handleOnMouseEnter = () => {
-    if (isFulfilledOrTypingMessageWithCitations(message)) {
+    if (!enableTextSelection && isFulfilledOrTypingMessageWithCitations(message)) {
       hoverCitation(message.generationId);
     }
   };
 
   const handleOnMouseLeave = () => {
-    if (isFulfilledOrTypingMessageWithCitations(message)) {
+    if (!enableTextSelection && isFulfilledOrTypingMessageWithCitations(message)) {
       hoverCitation(null);
     }
   };
@@ -126,8 +133,8 @@ const MessageRow = forwardRef<HTMLDivElement, Props>(function MessageRowInternal
           : undefined
       }
       className={cn(ReservedClasses.MESSAGE, 'flex', className)}
-      onMouseEnter={handleOnMouseEnter}
-      onMouseLeave={handleOnMouseLeave}
+      onMouseEnter={enableTextSelection ? undefined : handleOnMouseEnter}
+      onMouseLeave={enableTextSelection ? undefined : handleOnMouseLeave}
       ref={ref}
     >
       <LongPressMenu
@@ -162,14 +169,17 @@ const MessageRow = forwardRef<HTMLDivElement, Props>(function MessageRowInternal
         className={cn(
           'group flex h-fit w-full flex-col gap-2 rounded-md p-2 text-left md:flex-row',
           'transition-colors ease-in-out',
-          'hover:bg-mushroom-950',
-
+          // Apply selectable-text class when text selection is enabled
+          { 'selectable-text': enableTextSelection },
+          // Only apply hover effects if text selection is NOT enabled
           {
+            'hover:bg-mushroom-950': !enableTextSelection,
             'bg-mushroom-950':
+              !enableTextSelection &&
               isFulfilledOrTypingMessage(message) &&
               message.generationId &&
               hoveredGenerationId === message.generationId,
-            'bg-coral-950 hover:bg-coral-950': highlightMessage,
+            'bg-coral-950 hover:bg-coral-950': !enableTextSelection && highlightMessage,
           }
         )}
         {...(enableLongPress && longPressProps)}
@@ -177,7 +187,7 @@ const MessageRow = forwardRef<HTMLDivElement, Props>(function MessageRowInternal
         <div className="flex w-full gap-x-2">
           <Avatar message={message} />
           <div className="flex w-full min-w-0 max-w-message flex-1 flex-col items-center gap-x-3 md:flex-row">
-            <div className="w-full">
+            <div className={cn("w-full", { "selectable-text": enableTextSelection })}>
               {hasSteps && (
                 <ToolEvents
                   show={isStepsExpanded}

@@ -5,7 +5,6 @@ import { Welcome } from '@/components/Welcome';
 import { usechunkedMessagesStore } from '@/stores/persistedStore';
 import MessageStreamColumn from './MessageStreamColumn';
 import ChunkedControlPanel from './ChunkedControlPanel';
-import useTextSelection from '@/hooks/useTextSelection';
 import FeedbackPanel from './FeedbackPanel';
 
 type ChunkedMessagesProps = {
@@ -25,13 +24,9 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
   function ChunkedMessagesInternal(props, ref) {
     const { agentId, onRetry } = props;
     const chunksContainerRef = useRef<HTMLDivElement>(null);
+    const stream1Ref = useRef<HTMLDivElement>(null);
+    const stream2Ref = useRef<HTMLDivElement>(null);
     const [feedbackComment, setFeedbackComment] = useState('');
-    
-    // Use our text selection hook with the container ref
-    const {
-      selectedText,
-      clearSelection
-    } = useTextSelection(chunksContainerRef);
     
     // Get data from the chunkedMessages store
     const { 
@@ -62,17 +57,6 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
       chunkedMessages?.currentChunkIndices?.stream2
     ]);
     
-    // Sync selected text to store
-    useEffect(() => {
-      if (selectedText && chunkedMessages) {
-        // For simplicity, we'll associate the selection with the current chunk
-        // of stream1, but in a real implementation you'd want to determine which
-        // stream and chunk the selection belongs to
-        const stream1Index = chunkedMessages.currentChunkIndices?.stream1 || 0;
-        setSelectedText(selectedText, 'stream1', stream1Index);
-      }
-    }, [selectedText, chunkedMessages, setSelectedText]);
-    
     // Debug logging
     useEffect(() => { 
       // Auto-start feedback session if not already started
@@ -86,19 +70,21 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
     // Handle start over
     const handleStartOver = () => {
       resetEverything();
-      clearSelection();
+      clearSelectedText();
       setFeedbackComment('');
     };
     
     // Handle feedback for a stream
     const handleFeedback = (streamId: 'stream1' | 'stream2', rating: 'positive' | 'negative') => {
       const currentIndex = chunkedMessages?.currentChunkIndices?.[streamId] || 0;
+      
       recordFeedback(streamId, currentIndex, { 
         rating, 
         comment: feedbackComment,
-        selectedText: selectedText
+        selectedText: chunkedMessages?.selectedText || ''
       });
-      clearSelection();
+      
+      clearSelectedText();
       setFeedbackComment('');
     };
     
@@ -111,17 +97,13 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
           chunkedMessages.activeFeedback.chunkIndex, 
           { 
             comment: feedbackComment,
-            selectedText: selectedText 
+            selectedText: chunkedMessages?.selectedText || '' 
           }
         );
-        clearSelection();
+        
+        clearSelectedText();
         setFeedbackComment('');
       }
-    };
-    
-    // Handle text selection from a stream
-    const handleTextSelect = (text: string) => {
-      // Just rely on the hook and effect to handle this
     };
     
     // Always render even if there are no chunks yet
@@ -149,54 +131,56 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
       (stream1Chunks.length > 0 && currentIndices.stream1 < stream1Chunks.length - 1) ||
       (stream2Chunks.length > 0 && currentIndices.stream2 < stream2Chunks.length - 1);
 
-      return (
-        <div className="flex flex-col h-full relative overflow-hidden" ref={ref}>
-          {/* Content area with explicit height to enable scrolling */}
-          <div 
-            ref={chunksContainerRef}
-            className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6"
-            style={{ height: 'calc(100% - 140px)', scrollBehavior: 'smooth' }} // Increased to account for feedback panels
-          >
-            <div className="grid grid-cols-2 gap-6 mt-auto"> {/* mt-auto pushes content to bottom */}
-              {/* Left column: Stream 1 */}
+    return (
+      <div className="flex flex-col h-full relative overflow-hidden" ref={ref}>
+        {/* Content area with explicit height to enable scrolling */}
+        <div 
+          ref={chunksContainerRef}
+          className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6"
+          style={{ height: 'calc(100% - 140px)', scrollBehavior: 'smooth' }} // Increased to account for feedback panels
+        >
+          <div className="grid grid-cols-2 gap-6 mt-auto"> {/* mt-auto pushes content to bottom */}
+            {/* Left column: Stream 1 */}
+            <div ref={stream1Ref} className="flex flex-col selectable-container">
               <MessageStreamColumn
                 streamId="stream1"
                 chunks={stream1Chunks}
                 currentIndex={currentIndices.stream1}
                 onChunkClick={() => showNextChunkForStream('stream1')}
                 onFeedbackSelect={(rating) => handleFeedback('stream1', rating)}
-                onTextSelect={handleTextSelect}
               />
-              
-              {/* Right column: Stream 2 */}
+            </div>
+            
+            {/* Right column: Stream 2 */}
+            <div ref={stream2Ref} className="flex flex-col selectable-container">
               <MessageStreamColumn
                 streamId="stream2"
                 chunks={stream2Chunks}
                 currentIndex={currentIndices.stream2}
                 onChunkClick={() => showNextChunkForStream('stream2')}
                 onFeedbackSelect={(rating) => handleFeedback('stream2', rating)}
-                onTextSelect={handleTextSelect}
               />
             </div>
           </div>
-          
-          {/* Feedback Panels - Fixed position above control panel */}
-          <FeedbackPanel streamId="stream1" />
-          <FeedbackPanel streamId="stream2" />
-          
-          {/* Control Panel */}
-          <ChunkedControlPanel
-            progress={stream1Progress}
-            selectedText={selectedText}
-            feedbackComment={feedbackComment}
-            hasMoreChunks={hasMoreChunks}
-            onNextChunk={showNextChunk}
-            onStartOver={handleStartOver}
-            onFeedbackCommentChange={setFeedbackComment}
-            onSubmitFeedback={handleSubmitFeedback}
-          />
         </div>
-      );
+        
+        {/* Feedback Panels - Fixed position above control panel */}
+        <FeedbackPanel streamId="stream1" />
+        <FeedbackPanel streamId="stream2" />
+        
+        {/* Control Panel */}
+        <ChunkedControlPanel
+          progress={stream1Progress}
+          selectedText={chunkedMessages.selectedText || ''}
+          feedbackComment={feedbackComment}
+          hasMoreChunks={hasMoreChunks}
+          onNextChunk={showNextChunk}
+          onStartOver={handleStartOver}
+          onFeedbackCommentChange={setFeedbackComment}
+          onSubmitFeedback={handleSubmitFeedback}
+        />
+      </div>
+    );
   }
 );
 

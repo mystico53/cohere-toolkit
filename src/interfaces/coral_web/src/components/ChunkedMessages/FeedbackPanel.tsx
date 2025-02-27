@@ -22,6 +22,37 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   // Safely get the current chunk index with a fallback to 0
   const currentChunkIndex = store.chunkedMessages?.currentChunkIndices?.[streamId] ?? 0;
   
+  // Debug logging for data flow
+  useEffect(() => {
+    console.log(`[${streamId} Panel] Render with:`, {
+      storeState: store.chunkedMessages ? 'exists' : 'undefined',
+      selectedText: store.chunkedMessages?.selectedText || '(none)',
+      activeFeedbackStream: store.chunkedMessages?.activeFeedback?.streamId || 'none',
+      activeFeedbackChunk: store.chunkedMessages?.activeFeedback?.chunkIndex ?? 'none',
+      currentChunkIndex,
+      isForThisStream: store.chunkedMessages?.activeFeedback?.streamId === streamId
+    });
+  }, [store.chunkedMessages, streamId, currentChunkIndex]);
+  
+  // Get the currently selected text from the store
+  const selectedText = store.chunkedMessages?.selectedText || '';
+  const activeFeedback = store.chunkedMessages?.activeFeedback || { streamId: null, chunkIndex: null };
+  
+  // Only show selected text if it belongs to this panel's stream
+  const isSelectedTextForThisStream = activeFeedback?.streamId === streamId;
+  const displaySelectedText = isSelectedTextForThisStream ? selectedText : '';
+  
+  // Debug this specific calculation
+  useEffect(() => {
+    console.log(`[${streamId} Panel] Selection check:`, {
+      selectedText,
+      activeFeedbackStream: activeFeedback?.streamId,
+      thisStreamId: streamId,
+      isForThisStream: isSelectedTextForThisStream,
+      willDisplay: displaySelectedText ? 'yes' : 'no'
+    });
+  }, [selectedText, activeFeedback?.streamId, streamId, isSelectedTextForThisStream, displaySelectedText]);
+  
   // Safely get current feedback for this chunk (if any)
   const getFeedbackSafely = () => {
     if (!store.chunkedMessages?.feedback?.[streamId]) return undefined;
@@ -34,39 +65,51 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   useEffect(() => {
     setComment(currentFeedback?.comment || '');
     setDebugMessage('');
-  }, [currentChunkIndex, streamId]);
+  }, [currentChunkIndex, streamId, currentFeedback?.comment]);
   
-  // Handle thumbs up click with comment
+  // Prepare feedback object with the currently selected text
+  const prepareFeedbackWithSelection = (rating: 'positive' | 'negative' | undefined) => {
+    return {
+      rating,
+      comment: comment.trim(),
+      selectedText: isSelectedTextForThisStream ? selectedText : currentFeedback?.selectedText || '',
+      timestamp: Date.now()
+    };
+  };
+  
+  // Handle thumbs up click with comment and selected text
   const handleThumbsUp = () => {
     if (store.recordFeedback) {
-      const feedback = {
-        rating: 'positive',
-        comment: comment.trim(),
-        timestamp: Date.now()
-      };
-      
+      const feedback = prepareFeedbackWithSelection('positive');
+      console.log(`[${streamId} Panel] Recording positive feedback:`, feedback);
       store.recordFeedback(streamId, currentChunkIndex, feedback);
       
       // Show debug message
       setDebugMessage(`✅ Saved positive feedback for ${streamId}, chunk ${currentChunkIndex}`);
-      console.log('Saved feedback:', { streamId, chunkIndex: currentChunkIndex, feedback });
+      
+      // Clear the selected text after saving
+      if (store.clearSelectedText) {
+        console.log(`[${streamId} Panel] Clearing selected text`);
+        store.clearSelectedText();
+      }
     }
   };
   
-  // Handle thumbs down click with comment
+  // Handle thumbs down click with comment and selected text
   const handleThumbsDown = () => {
     if (store.recordFeedback) {
-      const feedback = {
-        rating: 'negative',
-        comment: comment.trim(),
-        timestamp: Date.now()
-      };
-      
+      const feedback = prepareFeedbackWithSelection('negative');
+      console.log(`[${streamId} Panel] Recording negative feedback:`, feedback);
       store.recordFeedback(streamId, currentChunkIndex, feedback);
       
       // Show debug message
       setDebugMessage(`✅ Saved negative feedback for ${streamId}, chunk ${currentChunkIndex}`);
-      console.log('Saved feedback:', { streamId, chunkIndex: currentChunkIndex, feedback });
+      
+      // Clear the selected text after saving
+      if (store.clearSelectedText) {
+        console.log(`[${streamId} Panel] Clearing selected text`);
+        store.clearSelectedText();
+      }
     }
   };
   
@@ -75,30 +118,43 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
     setComment(e.target.value);
   };
   
-  // Save comment only (without changing rating)
+  // Save comment and selected text (without changing rating)
   const handleSaveComment = () => {
     if (store.recordFeedback) {
       // Preserve existing rating if any
-      const feedback = {
-        rating: currentFeedback?.rating,
-        comment: comment.trim(),
-        timestamp: Date.now()
-      };
+      const feedback = prepareFeedbackWithSelection(currentFeedback?.rating);
+      console.log(`[${streamId} Panel] Saving comment with feedback:`, feedback);
       
       store.recordFeedback(streamId, currentChunkIndex, feedback);
       
       // Show debug message
       setDebugMessage(`✅ Saved comment for ${streamId}, chunk ${currentChunkIndex}`);
-      console.log('Saved comment:', { streamId, chunkIndex: currentChunkIndex, comment: comment.trim() });
+      
+      // Clear the selected text after saving
+      if (store.clearSelectedText) {
+        console.log(`[${streamId} Panel] Clearing selected text`);
+        store.clearSelectedText();
+      }
     }
   };
 
   return (
     <div className={`absolute bottom-[60px] ${position} border-t border-marble-950 bg-marble-1000 px-4 py-3 z-9`}>
-      <div className="text-sm font-medium text-marble-400">
-        Feedback Summary for Response {streamId === 'stream1' ? '1' : '2'}
+      <div className="text-sm font-medium text-marble-400 flex justify-between items-center">
+        <span>Feedback Summary for Response {streamId === 'stream1' ? '1' : '2'}</span>
+        <span className="text-xs text-marble-500">
+          {isSelectedTextForThisStream && selectedText ? '✓ Has selection' : ''}
+        </span>
       </div>
-      <div className="mt-2 text-sm flex flex-col space-y-2">
+      <div className="mt-2 text-sm flex flex-col space-y-3">
+        {/* Selected Text Section */}
+        {displaySelectedText && (
+          <div className="p-2 border border-marble-800 bg-marble-900 rounded text-xs">
+            <div className="font-medium mb-1 text-marble-400">Selected Text:</div>
+            <div className="italic">"{displaySelectedText}"</div>
+          </div>
+        )}
+        
         {/* Feedback controls row */}
         <div className="flex items-center space-x-2">
           {/* Rating buttons */}
@@ -147,7 +203,7 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
             <button
               onClick={handleSaveComment}
               className="px-3 py-1 text-sm bg-marble-800 hover:bg-marble-700 rounded"
-              title="Save comment only"
+              title="Save comment and selected text"
             >
               Save
             </button>
@@ -155,18 +211,27 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
         </div>
         
         {/* Feedback status display */}
-        {currentFeedback?.rating && (
-          <div className="text-sm text-marble-400">
-            Rating: {currentFeedback.rating === 'positive' ? 'Positive 👍' : 'Negative 👎'}
-          </div>
-        )}
-        
-        {/* Show saved comment if any */}
-        {currentFeedback?.comment && (
-          <div className="text-sm text-marble-400">
-            Comment: "{currentFeedback.comment}"
-          </div>
-        )}
+        <div className="flex flex-col space-y-1">
+          {currentFeedback?.rating && (
+            <div className="text-sm text-marble-400">
+              Rating: {currentFeedback.rating === 'positive' ? 'Positive 👍' : 'Negative 👎'}
+            </div>
+          )}
+          
+          {/* Show saved comment if any */}
+          {currentFeedback?.comment && (
+            <div className="text-sm text-marble-400">
+              Comment: "{currentFeedback.comment}"
+            </div>
+          )}
+          
+          {/* Show saved selected text if any */}
+          {currentFeedback?.selectedText && (
+            <div className="text-sm text-marble-400">
+              Saved text: "{currentFeedback.selectedText.substring(0, 50)}{currentFeedback.selectedText.length > 50 ? '...' : ''}"
+            </div>
+          )}
+        </div>
         
         {/* Debug message */}
         {debugMessage && (
