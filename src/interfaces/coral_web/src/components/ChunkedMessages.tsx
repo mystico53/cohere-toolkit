@@ -27,6 +27,9 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     // Get data from the chunkedMessages store
     const { chunkedMessages, showNextChunk, startFeedbackSession } = usechunkedMessagesStore();
     
+    // Get current chunks index - moved this up before the useEffect that needs it
+    const currentIndex = chunkedMessages?.currentChunkIndex || 0;
+    
     // Debug logging
     useEffect(() => {
       console.log("[DEBUG] ChunkedMessages store data:", {
@@ -45,10 +48,11 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     
     // Auto-scroll to bottom when new chunks are added
     useEffect(() => {
-      if (chunksContainerRef.current) {
+      if (chunksContainerRef.current && currentIndex >= 0) {
+        // Scroll to the bottom of the container when a new chunk is displayed
         chunksContainerRef.current.scrollTop = chunksContainerRef.current.scrollHeight;
       }
-    }, [chunkedMessages?.currentChunkIndex]);
+    }, [currentIndex]);
     
     // Modified check: only care if there are actual chunks
     const hasChunks = chunkedMessages?.chunks?.stream1?.length > 0 && 
@@ -74,14 +78,11 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       );
     }
     
-    // Get current chunks index
-    const currentIndex = chunkedMessages.currentChunkIndex || 0;
-    
     // Calculate progress
     const totalChunks = chunkedMessages.chunks?.stream1?.length || 0;
     const progress = totalChunks > 0 ? ((currentIndex + 1) / totalChunks) * 100 : 0;
 
-    // Generate accumulated chunks for display in reverse order (newest at bottom)
+    // Generate accumulated chunks for display
     const messagePairs: MessagePair[] = [];
     for (let i = 0; i <= currentIndex; i++) {
       const chunk1 = chunkedMessages.chunks?.stream1?.[i] || '';
@@ -94,58 +95,54 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
       });
     }
 
-    // Create reversed array for display (newest at bottom)
-    const reversedPairs = [...messagePairs].reverse();
-
     return (
       <div className="flex flex-col h-full relative" ref={ref}>
         {/* Main content area - takes all available space except control panel */}
-        <div className="flex-grow overflow-hidden flex flex-col justify-end">
-          {/* Scrollable chunks container */}
+        <div className="flex-grow overflow-hidden flex flex-col">
+          {/* Using flex-col with appropriate ordering and scroll positioning */}
           <div 
             ref={chunksContainerRef}
-            className="w-full overflow-y-auto px-4 py-6 pb-4"
+            className="w-full overflow-y-auto px-4 py-6 pb-4 flex flex-col"
           >
-            <div className="flex flex-col">
-              {reversedPairs.map((pair, idx) => (
-                <div key={`chunk-${pair.index}`} className="mb-6 last:mb-0">
-                  <div className="text-sm text-marble-400 font-medium mb-2">
-                    Chunk {pair.index + 1}
+            {/* Display chunks from oldest (top) to newest (bottom) */}
+            {messagePairs.map((pair) => (
+              <div key={`chunk-${pair.index}`} className="mb-6 last:mb-0">
+                <div className="text-sm text-marble-400 font-medium mb-2">
+                  Chunk {pair.index + 1}
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Left column: Stream 1 */}
+                  <div className="flex flex-col">
+                    <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
+                    <MessageRow
+                      isLast={false}
+                      isStreamingToolEvents={false}
+                      message={{
+                        type: MessageType.BOT,
+                        state: BotState.FULFILLED,
+                        text: pair.stream1,
+                      }}
+                      onRetry={onRetry}
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-6">
-                    {/* Left column: Stream 1 */}
-                    <div className="flex flex-col">
-                      <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
-                      <MessageRow
-                        isLast={false}
-                        isStreamingToolEvents={false}
-                        message={{
-                          type: MessageType.BOT,
-                          state: BotState.FULFILLED,
-                          text: pair.stream1,
-                        }}
-                        onRetry={onRetry}
-                      />
-                    </div>
-            
-                    {/* Right column: Stream 2 */}
-                    <div className="flex flex-col">
-                      <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
-                      <MessageRow
-                        isLast={false}
-                        isStreamingToolEvents={false}
-                        message={{
-                          type: MessageType.BOT,
-                          state: BotState.FULFILLED,
-                          text: pair.stream2,
-                        }}
-                        onRetry={onRetry}
-                      />
-                    </div>
+          
+                  {/* Right column: Stream 2 */}
+                  <div className="flex flex-col">
+                    <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
+                    <MessageRow
+                      isLast={false}
+                      isStreamingToolEvents={false}
+                      message={{
+                        type: MessageType.BOT,
+                        state: BotState.FULFILLED,
+                        text: pair.stream2,
+                      }}
+                      onRetry={onRetry}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
         
