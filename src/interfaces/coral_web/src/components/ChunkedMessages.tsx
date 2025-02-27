@@ -26,8 +26,24 @@ const globalStyle = `
   }
 }
 
-.chunk-highlight {
-  background-color: rgba(59, 130, 246, 0.05);
+.chunk {
+  display: inline;
+  padding: 2px 0;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.chunk-old {
+  background-color: rgba(200, 200, 200, 0.1);
+}
+
+.chunk-current {
+  background-color: rgba(59, 130, 246, 0.1);
+  cursor: pointer;
+}
+
+.chunk-current:hover {
+  background-color: rgba(59, 130, 246, 0.2);
 }
 
 .chunk-animate-in {
@@ -147,10 +163,18 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     const totalChunks = stream1Chunks.length || 0;
     const progress = totalChunks > 0 ? ((currentIndex + 1) / totalChunks) * 100 : 0;
 
-    // Combine all visible chunks for each stream into single strings
-    // This is more reliable than trying to use React elements
-    let stream1Text = '';
-    let stream2Text = '';
+    // Create React elements for each chunk with appropriate styling
+    // Also maintain plain text arrays as fallback
+    const stream1Elements = [];
+    const stream2Elements = [];
+    const stream1TextArray = [];
+    const stream2TextArray = [];
+    
+    // Function to handle chunk click
+    const handleChunkClick = (index) => {
+      console.log(`Chunk ${index} clicked`);
+      // Add your custom click handling logic here
+    };
     
     // Include all chunks up to the current index
     const maxIndex = Math.min(
@@ -163,8 +187,46 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
     const endIndex = Math.max(0, maxIndex);
     
     for (let i = 0; i <= endIndex; i++) {
-      stream1Text += (stream1Chunks[i] || '');
-      stream2Text += (stream2Chunks[i] || '');
+      const isCurrentChunk = i === endIndex;
+      const chunkClass = cn(
+        "chunk",
+        {
+          "chunk-old": !isCurrentChunk,
+          "chunk-current": isCurrentChunk,
+          "chunk-animate-in": isCurrentChunk && isAnimating
+        }
+      );
+      
+      const chunk1Text = stream1Chunks[i] || '';
+      const chunk2Text = stream2Chunks[i] || '';
+      
+      // Add text to arrays for fallback
+      stream1TextArray.push(chunk1Text);
+      stream2TextArray.push(chunk2Text);
+      
+      // Add clickable spans for stream 1
+      stream1Elements.push(
+        <span 
+          key={`stream1-chunk-${i}`}
+          className={chunkClass}
+          onClick={isCurrentChunk ? () => handleChunkClick(i) : undefined}
+          data-chunk-index={i}
+        >
+          {chunk1Text}
+        </span>
+      );
+      
+      // Add clickable spans for stream 2
+      stream2Elements.push(
+        <span 
+          key={`stream2-chunk-${i}`}
+          className={chunkClass}
+          onClick={isCurrentChunk ? () => handleChunkClick(i) : undefined}
+          data-chunk-index={i}
+        >
+          {chunk2Text}
+        </span>
+      );
     }
 
     // Custom event handler for Next Chunk that also scrolls
@@ -186,31 +248,45 @@ const ChunkedMessages = forwardRef<HTMLDivElement, ChunkedMessagesProps>(
             <div className="flex flex-col">
               <div className="text-sm text-marble-400 font-medium pb-2">Response 1</div>
               {/* Single MessageRow for entire stream 1 */}
-              <MessageRow
-                isLast={false}
-                isStreamingToolEvents={false}
-                message={{
-                  type: MessageType.BOT,
-                  state: BotState.FULFILLED,
-                  text: stream1Text,
-                }}
-                onRetry={onRetry}
-              />
+              {/* We need a fallback in case customContent isn't supported */}
+              {stream1Elements ? (
+                <MessageRow
+                  isLast={false}
+                  isStreamingToolEvents={false}
+                  message={{
+                    type: MessageType.BOT,
+                    state: BotState.FULFILLED,
+                    // Fallback text in case customContent isn't supported
+                    text: stream1TextArray.join(''),
+                  }}
+                  onRetry={onRetry}
+                  customContent={<div className="seamless-content">{stream1Elements}</div>}
+                />
+              ) : (
+                <div className="bg-red-100 p-4 text-red-800">No content available</div>
+              )}
             </div>
     
             {/* Right column: Stream 2 */}
             <div className="flex flex-col">
               <div className="text-sm text-marble-400 font-medium pb-2">Response 2</div>
               {/* Single MessageRow for entire stream 2 */}
-              <MessageRow
-                isLast={false}
-                isStreamingToolEvents={false}
-                message={{
-                  type: MessageType.BOT,
-                  state: BotState.FULFILLED,
-                  text: stream2Text,
-                }}
-                onRetry={onRetry}
+              {stream2Elements ? (
+                <MessageRow
+                  isLast={false}
+                  isStreamingToolEvents={false}
+                  message={{
+                    type: MessageType.BOT,
+                    state: BotState.FULFILLED,
+                    // Fallback text in case customContent isn't supported
+                    text: stream2TextArray.join(''),
+                  }}
+                  onRetry={onRetry}
+                  customContent={<div className="seamless-content">{stream2Elements}</div>}
+                />
+              ) : (
+                <div className="bg-red-100 p-4 text-red-800">No content available</div>
+              )}
               />
             </div>
           </div>
