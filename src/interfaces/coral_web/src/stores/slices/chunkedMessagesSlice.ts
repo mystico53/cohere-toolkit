@@ -3,6 +3,13 @@
 import { StateCreator } from 'zustand';
 import { StoreState } from '..';
 
+type ChunkFeedback = {
+  rating?: 'positive' | 'negative';
+  comment?: string;
+  selectedText?: string; 
+  timestamp?: number;   
+};
+
 // Store the complete text and all feedback data
 type chunkedMessagesState = {
   // Complete responses
@@ -17,10 +24,10 @@ type chunkedMessagesState = {
     stream2: string[];
   };
   
-  // Feedback data per chunk
+  // Enhanced feedback data per chunk
   feedback: {
-    stream1: Array<{ rating?: 'positive' | 'negative'; comment?: string }>;
-    stream2: Array<{ rating?: 'positive' | 'negative'; comment?: string }>;
+    stream1: ChunkFeedback[];
+    stream2: ChunkFeedback[];
   };
   
   // Current visible chunk index for EACH stream
@@ -34,6 +41,15 @@ type chunkedMessagesState = {
   
   // Is testing mode active
   isChunked: boolean;
+  
+  // Currently selected text for feedback
+  selectedText: string;
+  
+  // Currently active feedback stream and index
+  activeFeedback: {
+    streamId: 'stream1' | 'stream2' | null;
+    chunkIndex: number | null;
+  };
 };
 
 // Define actions for the slice
@@ -42,11 +58,21 @@ type chunkedMessagesActions = {
   updateStreamContent: (streamId: 'stream1' | 'stream2', content: string) => void;
   completeStreams: () => void;
   createChunks: (chunkSize?: number) => void;
-  recordFeedback: (streamId: 'stream1' | 'stream2', feedback: { rating?: 'positive' | 'negative'; comment?: string }) => void;
+  recordFeedback: (
+    streamId: 'stream1' | 'stream2', 
+    chunkIndex: number, 
+    feedback: ChunkFeedback
+  ) => void;
   showNextChunk: () => void;
   showNextChunkForStream: (streamId: 'stream1' | 'stream2') => void;
+  setSelectedText: (text: string, streamId: 'stream1' | 'stream2', chunkIndex: number) => void;
+  clearSelectedText: () => void;
   resetFeedbackSession: () => void;
   resetEverything: () => void;
+  
+  // New methods for UI interaction
+  getFeedbackForChunk: (streamId: 'stream1' | 'stream2', chunkIndex: number) => ChunkFeedback | undefined;
+  getSelectedTextFeedback: () => { text: string; streamId: 'stream1' | 'stream2' | null; chunkIndex: number | null; };
 };
 
 export type chunkedMessagesStore = {
@@ -73,6 +99,11 @@ const INITIAL_STATE: chunkedMessagesState = {
   },
   isComplete: false,
   isChunked: false,
+  selectedText: '',
+  activeFeedback: {
+    streamId: null,
+    chunkIndex: null,
+  }
 };
 
 export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunkedMessagesStore> = (set, get) => ({
@@ -183,22 +214,36 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     });
   },
   
-  recordFeedback: (streamId, chunkFeedback) => {
+  recordFeedback: (streamId, chunkIndex, chunkFeedback) => {
     set((state) => {
-      const currentIndex = state.chunkedMessages.currentChunkIndices[streamId];
-      const updatedFeedback = {
-        ...state.chunkedMessages.feedback,
-        [streamId]: [
-          ...state.chunkedMessages.feedback[streamId].slice(0, currentIndex),
-          chunkFeedback,
-          ...state.chunkedMessages.feedback[streamId].slice(currentIndex + 1)
-        ]
+      // Make sure feedback arrays exist
+      const streamFeedback = state.chunkedMessages.feedback[streamId] || [];
+      
+      // Create a new array with the updated feedback at the specified index
+      const updatedFeedback = [...streamFeedback];
+      
+      // Add timestamp to the feedback
+      const feedbackWithTimestamp = {
+        ...chunkFeedback,
+        timestamp: Date.now()
       };
+      
+      // Update the feedback at the specified index
+      updatedFeedback[chunkIndex] = feedbackWithTimestamp;
       
       return {
         chunkedMessages: {
           ...state.chunkedMessages,
-          feedback: updatedFeedback
+          feedback: {
+            ...state.chunkedMessages.feedback,
+            [streamId]: updatedFeedback
+          },
+          // Clear selected text and active feedback after recording
+          selectedText: '',
+          activeFeedback: {
+            streamId: null,
+            chunkIndex: null
+          }
         }
       };
     });
@@ -300,4 +345,47 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
       };
     });
   },
+
+  setSelectedText: (text, streamId, chunkIndex) => {
+    set((state) => ({
+      chunkedMessages: {
+        ...state.chunkedMessages,
+        selectedText: text,
+        activeFeedback: {
+          streamId,
+          chunkIndex
+        }
+      }
+    }));
+  },
+
+  clearSelectedText: () => {
+    set((state) => ({
+      chunkedMessages: {
+        ...state.chunkedMessages,
+        selectedText: '',
+        activeFeedback: {
+          streamId: null,
+          chunkIndex: null
+        }
+      }
+    }));
+  },
+
+  getFeedbackForChunk: (streamId, chunkIndex) => {
+    const { feedback } = get().chunkedMessages;
+    const streamFeedback = feedback[streamId] || [];
+    return streamFeedback[chunkIndex];
+  },
+  
+  // Helper method to get currently selected text information
+  getSelectedTextFeedback: () => {
+    const { selectedText, activeFeedback } = get().chunkedMessages;
+    return {
+      text: selectedText,
+      streamId: activeFeedback.streamId,
+      chunkIndex: activeFeedback.chunkIndex
+    };
+  }
+
 });
