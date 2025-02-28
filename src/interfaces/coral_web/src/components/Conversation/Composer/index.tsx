@@ -46,8 +46,17 @@ export const Composer: React.FC<Props> = ({
   chatWindowRef,
 }) => {
   const {
-    settings: { isMobileConvListPanelOpen },
+    settings: { isMobileConvListPanelOpen, showChunkedMessages },
   } = useSettingsStore();
+  
+  // Add state to override the global setting temporarily
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Reset expansion state when showChunkedMessages changes
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [showChunkedMessages]);
+  
   const isDesktop = useIsDesktop();
   const breakpoint = useBreakpoint();
   const isSmallBreakpoint = breakpoint === 'sm';
@@ -66,8 +75,11 @@ export const Composer: React.FC<Props> = ({
 
   const isReadyToReceiveMessage = !isStreaming;
   const isAgentsModeOn = !!experimentalFeatures?.USE_AGENTS_VIEW;
-  const isComposerDisabled = isToolAuthRequired && isAgentsModeOn;
+  const isComposerDisabled = (isToolAuthRequired && isAgentsModeOn);
   const canSend = isReadyToReceiveMessage && value.trim().length > 0 && !isComposerDisabled;
+  
+  // Calculate visibility based on global setting and local override
+  const isComposerVisible = !showChunkedMessages || isExpanded;
 
   const handleCompositionStart = () => {
     setIsComposing(true);
@@ -167,99 +179,132 @@ export const Composer: React.FC<Props> = ({
   });
 
   return (
-    <div className="flex w-full flex-col">
-      {!agentId && <FirstTurnSuggestions isFirstTurn={isFirstTurn} onSuggestionClick={onSend} />}
-      <div
+    <>
+      {/* Button to show composer when collapsed */}
+      {showChunkedMessages && !isExpanded && (
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="w-full py-2 mb-2 bg-marble-950 text-center rounded-md hover:bg-marble-900 transition-colors text-mushroom-300"
+        >
+          <Icon name="message-square" className="mr-2" />
+          <span>Show Composer</span>
+        </button>
+      )}
+      
+      <div 
         className={cn(
-          'relative flex w-full flex-col',
-          'transition ease-in-out',
-          'rounded border bg-marble-1000',
-          'border-marble-800 focus-within:border-mushroom-400',
-          {
-            'border-marble-800 bg-marble-950': isComposerDisabled,
-          }
+          "flex w-full flex-col overflow-hidden transition-all duration-300",
+          isComposerVisible ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0" 
         )}
-        onDragEnter={() => setIsDragDropInputActive(true)}
-        onDragOver={() => setIsDragDropInputActive(true)}
-        onDragLeave={() => setIsDragDropInputActive(false)}
-        onDrop={() => {
-          setTimeout(() => {
-            setIsDragDropInputActive(false);
-          }, 100);
-        }}
       >
-        <DragDropFileUploadOverlay active={isDragDropInputActive} onUploadFile={onUploadFile} />
-        <div className="relative flex items-end pr-2 md:pr-4">
-          <textarea
-            id={CHAT_COMPOSER_TEXTAREA_ID}
-            dir="auto"
-            ref={textareaRef}
-            value={value}
-            placeholder={STRINGS.messageInput}
+        <div className="flex w-full flex-col">
+          {/* If expanded in chunked mode, show a close button */}
+          {showChunkedMessages && isExpanded && (
+            <div className="flex justify-end mb-1">
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="text-volcanic-500 hover:text-volcanic-300"
+              >
+                <Icon name="x" size={16} />
+                <span className="ml-1 text-sm">Hide</span>
+              </button>
+            </div>
+          )}
+        
+          {!agentId && <FirstTurnSuggestions isFirstTurn={isFirstTurn} onSuggestionClick={onSend} />}
+          <div
             className={cn(
-              'w-full flex-1 resize-none overflow-hidden',
-              'self-center',
-              'px-2 pb-3 pt-2 md:px-4 md:pb-6 md:pt-4',
-              'rounded',
-              'bg-marble-1000',
+              'relative flex w-full flex-col',
               'transition ease-in-out',
-              'placeholder:text-volcanic-600 focus:outline-none',
-              STYLE_LEVEL_TO_CLASSES.p,
-              'leading-[150%]',
+              'rounded border bg-marble-1000',
+              'border-marble-800 focus-within:border-mushroom-400',
               {
-                'bg-marble-950': isComposerDisabled,
+                'border-marble-800 bg-marble-950': isComposerDisabled,
               }
             )}
-            style={{
-              maxHeight: `${
-                chatWindowHeight * (isSmallBreakpoint || breakpoint === 'md' ? 0.6 : 0.75)
-              }px`,
-            }}
-            rows={1}
-            onKeyDown={handleKeyDown}
-            onChange={handleChange}
-            disabled={isComposerDisabled}
-          />
-          <button
-            className={cn(
-              'h-8 w-8',
-              'my-2 ml-1 md:my-4',
-              'flex flex-shrink-0 items-center justify-center rounded',
-              'transition ease-in-out',
-              'text-mushroom-300 hover:bg-mushroom-900',
-              { 'text-mushroom-600': !canSend }
-            )}
-            type="button"
-            onClick={() => {
-              if (canSend) {
-                onSend(value);
-              } else {
-                onStop();
-              }
+            onDragEnter={() => setIsDragDropInputActive(true)}
+            onDragOver={() => setIsDragDropInputActive(true)}
+            onDragLeave={() => setIsDragDropInputActive(false)}
+            onDrop={() => {
+              setTimeout(() => {
+                setIsDragDropInputActive(false);
+              }, 100);
             }}
           >
-            {isReadyToReceiveMessage ? <Icon name="arrow-right" /> : <Square />}
-          </button>
+            <DragDropFileUploadOverlay active={isDragDropInputActive} onUploadFile={onUploadFile} />
+            <div className="relative flex items-end pr-2 md:pr-4">
+              <textarea
+                id={CHAT_COMPOSER_TEXTAREA_ID}
+                dir="auto"
+                ref={textareaRef}
+                value={value}
+                placeholder={STRINGS.messageInput}
+                className={cn(
+                  'w-full flex-1 resize-none overflow-hidden',
+                  'self-center',
+                  'px-2 pb-3 pt-2 md:px-4 md:pb-6 md:pt-4',
+                  'rounded',
+                  'bg-marble-1000',
+                  'transition ease-in-out',
+                  'placeholder:text-volcanic-600 focus:outline-none',
+                  STYLE_LEVEL_TO_CLASSES.p,
+                  'leading-[150%]',
+                  {
+                    'bg-marble-950': isComposerDisabled,
+                  }
+                )}
+                style={{
+                  maxHeight: `${
+                    chatWindowHeight * (isSmallBreakpoint || breakpoint === 'md' ? 0.6 : 0.75)
+                  }px`,
+                }}
+                rows={1}
+                onKeyDown={handleKeyDown}
+                onChange={handleChange}
+                disabled={isComposerDisabled}
+              />
+              <button
+                className={cn(
+                  'h-8 w-8',
+                  'my-2 ml-1 md:my-4',
+                  'flex flex-shrink-0 items-center justify-center rounded',
+                  'transition ease-in-out',
+                  'text-mushroom-300 hover:bg-mushroom-900',
+                  { 'text-mushroom-600': !canSend }
+                )}
+                type="button"
+                onClick={() => {
+                  if (canSend) {
+                    onSend(value);
+                  } else {
+                    onStop();
+                  }
+                }}
+              >
+                {isReadyToReceiveMessage ? <Icon name="arrow-right" /> : <Square />}
+              </button>
+            </div>
+            <ComposerFiles />
+            <ComposerToolbar
+              isStreaming={isStreaming}
+              onUploadFile={onUploadFile}
+              onDataSourceMenuToggle={handleDataSourceMenuClick}
+              menuProps={{
+                show: showDataSourceMenu,
+                tagQuery: tagQuery,
+                tags: suggestedTags,
+                totalTags: totalTags,
+                onChange: handleTagSelect,
+                onHide: () => setShowDataSourceMenu(false),
+                onToggle: handleDataSourceMenuClick,
+                onSeeAll: () => textareaRef.current?.focus(),
+              }}
+            />
+          </div>
+          <ComposerError className="pt-2" />
         </div>
-        <ComposerFiles />
-        <ComposerToolbar
-          isStreaming={isStreaming}
-          onUploadFile={onUploadFile}
-          onDataSourceMenuToggle={handleDataSourceMenuClick}
-          menuProps={{
-            show: showDataSourceMenu,
-            tagQuery: tagQuery,
-            tags: suggestedTags,
-            totalTags: totalTags,
-            onChange: handleTagSelect,
-            onHide: () => setShowDataSourceMenu(false),
-            onToggle: handleDataSourceMenuClick,
-            onSeeAll: () => textareaRef.current?.focus(),
-          }}
-        />
       </div>
-      <ComposerError className="pt-2" />
-    </div>
+    </>
   );
 };
 
