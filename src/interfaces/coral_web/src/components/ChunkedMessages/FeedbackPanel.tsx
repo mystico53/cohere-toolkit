@@ -17,6 +17,11 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   // Access the store safely with defensive checks
   const store = usechunkedMessagesStore();
   
+  // Calculate position based on streamId
+  const position = streamId === 'stream1' 
+    ? 'left-0 right-1/2 pr-3' // Left half 
+    : 'left-1/2 right-0 pl-3'; // Right half
+  
   // Safely get the current chunk index with a fallback to 0
   const currentChunkIndex = store.chunkedMessages?.currentChunkIndices?.[streamId] ?? 0;
   
@@ -76,8 +81,7 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
       activeFeedbackStream: activeFeedback?.streamId,
       thisStreamId: streamId,
       isForThisStream: isSelectedTextForThisStream,
-      willDisplay: displaySelectedText ? 'yes' : 'no',
-      textLength: displaySelectedText?.length || 0
+      willDisplay: displaySelectedText ? 'yes' : 'no'
     });
   }, [selectedText, activeFeedback?.streamId, streamId, isSelectedTextForThisStream, displaySelectedText]);
   
@@ -184,7 +188,7 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   return (
     <div 
       ref={panelRef}
-      className="border-t border-marble-950 bg-marble-1000 px-4 py-3 z-9 min-h-[110px]"
+      className={`absolute bottom-[60px] ${position} border-t border-marble-950 bg-marble-1000 px-4 py-3 z-9`}
     >
       <div className="text-sm font-medium text-marble-400 flex justify-between items-center">
         <span>Feedback Summary for Response {streamId === 'stream1' ? '1' : '2'}</span>
@@ -192,15 +196,14 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
           {isSelectedTextForThisStream && selectedText ? '✓ Has selection' : ''}
         </span>
       </div>
-      {/* Selected Text Section - Positioned to expand upwards with more height */}
-      {displaySelectedText && (
-        <div className="absolute bottom-full left-0 right-0 p-3 mb-2 mx-4 border-2 border-marble-700 bg-marble-900 rounded text-xs z-10 shadow-lg max-h-[200px] overflow-y-auto">
-          <div className="font-medium mb-2 text-marble-300 text-sm">Selected Text:</div>
-          <div className="italic bg-marble-800 p-2 rounded">{displaySelectedText}</div>
-        </div>
-      )}
-      
       <div className="mt-2 text-sm flex flex-col space-y-3">
+        {/* Selected Text Section */}
+        {displaySelectedText && (
+          <div className="p-2 border border-marble-800 bg-marble-900 rounded text-xs">
+            <div className="font-medium mb-1 text-marble-400">Selected Text:</div>
+            <div className="italic">"{displaySelectedText}"</div>
+          </div>
+        )}
         
         {/* Feedback controls row */}
         <div className="flex items-center space-x-2">

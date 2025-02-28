@@ -118,7 +118,7 @@ export const Header: React.FC<Props> = ({ isStreaming, agentId }) => {
     conversation: { id, name },
   } = useConversationStore();
   const {
-    settings: { isConvListPanelOpen, isConfigDrawerOpen, showChunkedMessages }, // Added showChunkedMessages
+    settings: { isConvListPanelOpen, isConfigDrawerOpen },
     setSettings,
     setIsConvListPanelOpen,
   } = useSettingsStore();
@@ -143,7 +143,7 @@ export const Header: React.FC<Props> = ({ isStreaming, agentId }) => {
   });
 
   return (
-    <div className={cn('flex h-header w-full min-w-0 items-center border-b relative', 'border-marble-950')}>
+    <div className={cn('flex h-header w-full min-w-0 items-center border-b', 'border-marble-950')}>
       <div
         className={cn('flex w-full flex-1 items-center justify-between px-5', { truncate: !!id })}
       >
@@ -226,15 +226,6 @@ export const Header: React.FC<Props> = ({ isStreaming, agentId }) => {
           />
         </span>
       </div>
-      
-      {/* Conditional rendering of centered "Hi" */}
-      {showChunkedMessages && (
-        <div className="absolute inset-x-0 top-0 bottom-0 flex items-center justify-center pointer-events-none">
-          <Text styleAs="p-lg" as="span" className="pointer-events-auto bg-mushroom-800 px-3 py-1 rounded-md">
-            Hi
-          </Text>
-        </div>
-      )}
     </div>
   );
 };

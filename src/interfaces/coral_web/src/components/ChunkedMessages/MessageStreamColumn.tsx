@@ -61,13 +61,13 @@ const MessageStreamColumn = ({
   }, [prevChunksLength, totalCharsCount, visibleText]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       <div className="text-sm text-marble-400 font-medium pb-2">
         Response {streamId === 'stream1' ? '1' : '2'} (Chunk {currentIndex + 1} of {chunks.length || 1})
       </div>
       
       <div 
-        className="clickable-message relative flex-grow"
+        className="clickable-message relative"
         onMouseUp={handleMouseUp}
         ref={messageContainerRef}
       >
@@ -88,8 +88,8 @@ const MessageStreamColumn = ({
             className="absolute top-0 left-0 w-full pointer-events-none"
             style={{
               height: `${highlightHeight}px`,
-              backgroundColor: 'rgba(255, 255, 0, 0.05)',
-              backdropFilter: 'brightness(95%)'
+              backgroundColor: 'rgba(255, 0, 0, 0.15)',
+              backdropFilter: 'brightness(90%)'
             }}
           />
         )}
