@@ -70,13 +70,19 @@ const MessageRow = forwardRef<HTMLDivElement, Props>(function MessageRowInternal
     !!message.toolEvents &&
     message.toolEvents.length > 0;
 
-  const getMessageText = () => {
-    if (isFulfilledMessage(message)) {
-      return message.originalText;
-    }
+    const getMessageText = () => {
+      if (isFulfilledMessage(message)) {
+        return message.originalText || message.text;
+      }
+      return message.text;
+    };
 
-    return message.text;
-  };
+    <MessageContent 
+      isLast={isLast} 
+      message={message} 
+      onRetry={onRetry}
+      allowHtml={message.allowHtml} 
+    />
 
   const enableLongPress =
     (isFulfilledMessage(message) || isUserMessage(message)) && breakpoint === Breakpoint.sm;

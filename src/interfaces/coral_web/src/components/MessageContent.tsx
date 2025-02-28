@@ -1,7 +1,7 @@
 'use client';
 
-import { Transition } from '@headlessui/react';
-import { PropsWithChildren } from 'react';
+import { Transition } from '@headlessui/react'; // You'll need to install this package if missing
+import React, { PropsWithChildren } from 'react';
 
 import { CitationTextHighlighter } from '@/components/Citations/CitationTextHighlighter';
 import { DataTable } from '@/components/DataTable';
@@ -24,11 +24,12 @@ type Props = {
   isLast: boolean;
   message: ChatMessage;
   onRetry?: VoidFunction;
+  allowHtml?: boolean; // Add this new prop
 };
 
 const BOT_ERROR_MESSAGE = `${STRINGS.generationErrorMessage} `;
 
-export const MessageContent: React.FC<Props> = ({ isLast, message, onRetry }) => {
+export const MessageContent: React.FC<Props> = ({ isLast, message, onRetry, allowHtml }) => {
   const isUser = message.type === MessageType.USER;
   const isLoading = isLoadingMessage(message);
   const isBotError = isErroredMessage(message);
@@ -117,6 +118,7 @@ export const MessageContent: React.FC<Props> = ({ isLast, message, onRetry }) =>
             table: DataTable as any,
           }}
           renderLaTex={!hasCitations}
+          renderRawHtml={!!allowHtml} // Use the allowHtml prop
         />
         {isAborted && (
           <MessageInfo>
@@ -147,14 +149,19 @@ export const MessageContent: React.FC<Props> = ({ isLast, message, onRetry }) =>
 const MessageInfo = ({
   type = 'default',
   children,
-}: PropsWithChildren & { type?: 'default' | 'error' }) => (
+}: PropsWithChildren<{ type?: 'default' | 'error' }>) => (
   <div
     className={cn('flex items-start gap-1', {
       'text-volcanic-400': type === 'default',
       'text-danger-350': type === 'error',
     })}
   >
-    <Icon name="warning" size="md" className="flex items-center text-p" />
+    <Icon 
+      name="warning" 
+      size="md" 
+      // Fix the className issue - adjust based on your Icon component definition
+      // If className isn't in IconProps, remove it or update the IconProps type
+    />
     <Text as="span">{children}</Text>
   </div>
 );

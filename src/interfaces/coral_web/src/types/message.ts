@@ -43,6 +43,7 @@ export type FulfilledMessage = BaseMessage & {
   isRAGOn?: boolean;
   originalText: string;
   toolEvents?: StreamToolCallsGeneration[];
+  allowHtml?: boolean;
 };
 
 /**
