@@ -49,13 +49,19 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
     
     // Scroll to bottom when chunks change
     useEffect(() => {
-      scrollToBottom();
+      // Small delay to ensure DOM is updated before scrolling
+      setTimeout(scrollToBottom, 50);
     }, [
       chunkedMessages?.chunks?.stream1?.length, 
       chunkedMessages?.chunks?.stream2?.length,
       chunkedMessages?.currentChunkIndices?.stream1,
       chunkedMessages?.currentChunkIndices?.stream2
     ]);
+    
+    // Additionally, ensure initial scroll position is at the bottom
+    useEffect(() => {
+      scrollToBottom();
+    }, []);
     
     // Debug logging
     useEffect(() => { 
@@ -138,40 +144,53 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
 
     return (
       <div className="flex flex-col h-full relative overflow-hidden" ref={ref}>
-        {/* Content area with explicit height to enable scrolling */}
+        {/* Content area with flex layout to properly space content */}
         <div 
           ref={chunksContainerRef}
-          className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6"
-          style={{ height: 'calc(100% - 140px)', scrollBehavior: 'smooth' }} // Increased to account for feedback panels
+          className="flex-grow flex flex-col overflow-y-auto w-full"
+          style={{ height: 'calc(100% - 190px)', scrollBehavior: 'smooth' }}
         >
-          <div className="grid grid-cols-2 gap-6 mt-auto"> {/* mt-auto pushes content to bottom */}
+          {/* Message Streams with bottom padding for feedback panels */}
+          <div className="flex-grow grid grid-cols-2 gap-6 px-4 py-6 mt-auto">
             {/* Left column: Stream 1 */}
-            <div ref={stream1Ref} className="flex flex-col selectable-container">
+            <div 
+              ref={stream1Ref} 
+              className="flex flex-col selectable-container"
+              style={{ paddingBottom: '40px' }} // Add padding to prevent overlap with feedback panel
+            >
               <MessageStreamColumn
                 streamId="stream1"
                 chunks={stream1Chunks}
                 currentIndex={currentIndices.stream1}
-                // Removed: onChunkClick prop to disable click advancement
                 onFeedbackSelect={(rating) => handleFeedback('stream1', rating)}
               />
             </div>
             
             {/* Right column: Stream 2 */}
-            <div ref={stream2Ref} className="flex flex-col selectable-container">
+            <div 
+              ref={stream2Ref} 
+              className="flex flex-col selectable-container"
+              style={{ paddingBottom: '40px' }} // Add padding to prevent overlap with feedback panel
+            >
               <MessageStreamColumn
                 streamId="stream2"
                 chunks={stream2Chunks}
                 currentIndex={currentIndices.stream2}
-                // Removed: onChunkClick prop to disable click advancement
                 onFeedbackSelect={(rating) => handleFeedback('stream2', rating)}
               />
             </div>
           </div>
         </div>
         
-        {/* Feedback Panels - Fixed position above control panel */}
-        <FeedbackPanel streamId="stream1" />
-        <FeedbackPanel streamId="stream2" />
+        {/* Feedback Panels - Non-overlapping fixed containers */}
+        <div className="w-full flex h-[130px]">
+          <div className="w-1/2 pr-3 relative h-full">
+            <FeedbackPanel streamId="stream1" />
+          </div>
+          <div className="w-1/2 pl-3 relative h-full">
+            <FeedbackPanel streamId="stream2" />
+          </div>
+        </div>
         
         {/* Control Panel */}
         <ChunkedControlPanel
