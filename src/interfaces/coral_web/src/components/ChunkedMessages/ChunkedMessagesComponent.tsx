@@ -138,11 +138,23 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
 
     return (
       <div className="flex flex-col h-full relative overflow-hidden" ref={ref}>
+        {/* Control Panel - Now at the top */}
+        <ChunkedControlPanel
+          progress={stream1Progress}
+          hasMoreChunks={hasMoreChunks}
+          onNextChunk={showNextChunk}
+          onStartOver={handleStartOver}
+        />
+        
         {/* Content area with explicit height to enable scrolling */}
         <div 
           ref={chunksContainerRef}
           className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6"
-          style={{ height: 'calc(100% - 140px)', scrollBehavior: 'smooth' }} // Increased to account for feedback panels
+          style={{ 
+            height: 'calc(100% - 140px)', 
+            marginTop: '60px', // Add margin to account for control panel at top
+            scrollBehavior: 'smooth' 
+          }}
         >
           <div className="grid grid-cols-2 gap-6 mt-auto"> {/* mt-auto pushes content to bottom */}
             {/* Left column: Stream 1 */}
@@ -151,7 +163,6 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
                 streamId="stream1"
                 chunks={stream1Chunks}
                 currentIndex={currentIndices.stream1}
-                // Removed: onChunkClick prop to disable click advancement
                 onFeedbackSelect={(rating) => handleFeedback('stream1', rating)}
               />
             </div>
@@ -162,24 +173,15 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
                 streamId="stream2"
                 chunks={stream2Chunks}
                 currentIndex={currentIndices.stream2}
-                // Removed: onChunkClick prop to disable click advancement
                 onFeedbackSelect={(rating) => handleFeedback('stream2', rating)}
               />
             </div>
           </div>
         </div>
         
-        {/* Feedback Panels - Fixed position above control panel */}
+        {/* Feedback Panels - Fixed position above content */}
         <FeedbackPanel streamId="stream1" />
         <FeedbackPanel streamId="stream2" />
-        
-        {/* Control Panel */}
-        <ChunkedControlPanel
-          progress={stream1Progress}
-          hasMoreChunks={hasMoreChunks}
-          onNextChunk={showNextChunk}
-          onStartOver={handleStartOver}
-        />
       </div>
     );
   }
