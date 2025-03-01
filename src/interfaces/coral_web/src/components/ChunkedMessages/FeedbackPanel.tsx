@@ -9,6 +9,9 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   // Add ref for panel
   const panelRef = useRef<HTMLDivElement>(null);
   
+  // Add ref for comment input to enable auto-focus
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  
   // Local state for the comment input and selected text
   const [comment, setComment] = useState('');
   const [highlightedText, setHighlightedText] = useState('');
@@ -38,8 +41,13 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   useEffect(() => {
     if (isSelectedTextForThisStream && selectedText) {
       setHighlightedText(selectedText);
+      
+      // Auto-focus the comment input when text is selected for this stream
+      if (commentInputRef.current && currentChunkIndex < totalChunks - 1) {
+        commentInputRef.current.focus();
+      }
     }
-  }, [isSelectedTextForThisStream, selectedText]);
+  }, [isSelectedTextForThisStream, selectedText, currentChunkIndex, totalChunks]);
   
   // Safely get current feedback for this chunk (if any)
   const getFeedbackSafely = () => {
@@ -73,6 +81,11 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
         store.setSelectedText(text, streamId, currentChunkIndex);
         // Update our local state with the highlighted text
         setHighlightedText(text);
+        
+        // Auto-focus the comment input when text is selected for this stream
+        if (commentInputRef.current && currentChunkIndex < totalChunks - 1) {
+          commentInputRef.current.focus();
+        }
       }
     };
     
@@ -94,7 +107,7 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('click', handleDocumentClick);
     };
-  }, [streamId, currentChunkIndex, store]);
+  }, [streamId, currentChunkIndex, store, totalChunks]);
   
   // Clear the highlighted text when moving to the next chunk
   useEffect(() => {
@@ -143,6 +156,26 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
     const newComment = e.target.value;
     setComment(newComment);
   };
+  
+  // Handle form submission (used by both button click and Enter key)
+  const handleSubmitFeedback = () => {
+    if (store.recordFeedback) {
+      const feedback = prepareFeedbackWithSelection(undefined);
+      store.recordFeedback(streamId, currentChunkIndex, feedback);
+      
+      if (store.showNextChunk) {
+        store.showNextChunk();
+      }
+    }
+  };
+  
+  // Handle key press events on the input
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmitFeedback();
+    }
+  };
 
   // Calculate position for the highlight box based on streamId
   const highlightPosition = streamId === 'stream1' 
@@ -189,23 +222,16 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
           {currentChunkIndex < totalChunks - 1 && (
             <div className="relative flex-1 max-w-xs flex">
               <input
+                ref={commentInputRef}
                 type="text"
                 value={comment}
                 onChange={handleCommentChange}
+                onKeyDown={handleKeyDown}
                 placeholder="Add a comment..."
                 className="w-full px-3 py-2 text-sm bg-marble-900 border border-marble-800 rounded-l"
               />
               <button
-                onClick={() => {
-                  if (store.recordFeedback) {
-                    const feedback = prepareFeedbackWithSelection(undefined);
-                    store.recordFeedback(streamId, currentChunkIndex, feedback);
-                    
-                    if (store.showNextChunk) {
-                      store.showNextChunk();
-                    }
-                  }
-                }}
+                onClick={handleSubmitFeedback}
                 className="px-3 py-2 text-sm bg-marble-800 hover:bg-marble-700 text-marble-300 border border-marble-800 rounded-r"
               >
                 Submit
