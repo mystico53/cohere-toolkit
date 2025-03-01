@@ -9,8 +9,9 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   // Add ref for panel
   const panelRef = useRef<HTMLDivElement>(null);
   
-  // Local state for the comment input
+  // Local state for the comment input and selected text
   const [comment, setComment] = useState('');
+  const [highlightedText, setHighlightedText] = useState('');
   
   // Access the store safely with defensive checks
   const store = usechunkedMessagesStore();
@@ -26,15 +27,34 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   // Get the total number of chunks for this stream
   const totalChunks = store.chunkedMessages?.chunks?.[streamId]?.length ?? 0;
   
+  // Get the currently selected text from the store
+  const selectedText = store.chunkedMessages?.selectedText || '';
+  const activeFeedback = store.chunkedMessages?.activeFeedback || { streamId: null, chunkIndex: null };
+  
+  // Only show selected text if it belongs to this panel's stream
+  const isSelectedTextForThisStream = activeFeedback?.streamId === streamId;
+  
+  // Track when text is selected in this stream and store it
+  useEffect(() => {
+    if (isSelectedTextForThisStream && selectedText) {
+      setHighlightedText(selectedText);
+    }
+  }, [isSelectedTextForThisStream, selectedText]);
+  
+  // Safely get current feedback for this chunk (if any)
+  const getFeedbackSafely = () => {
+    if (!store.chunkedMessages?.feedback?.[streamId]) return undefined;
+    return store.chunkedMessages.feedback[streamId][currentChunkIndex];
+  };
+  
+  const currentFeedback = getFeedbackSafely();
+  
   // Add text selection handling
   useEffect(() => {
     const handleMouseUp = () => {
       const selection = window.getSelection();
       if (!selection || !selection.toString().trim()) {
-        // Clear the selection if store has clearSelectedText method
-        if (store.clearSelectedText) {
-          store.clearSelectedText();
-        }
+        // Don't clear the highlighted text here, it should persist
         return;
       }
       
@@ -51,6 +71,8 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
       
       if (isInThisStream && store.setSelectedText) {
         store.setSelectedText(text, streamId, currentChunkIndex);
+        // Update our local state with the highlighted text
+        setHighlightedText(text);
       }
     };
     
@@ -58,6 +80,7 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
     const handleDocumentClick = (e: MouseEvent) => {
       const selection = window.getSelection();
       if (!selection || !selection.toString().trim()) {
+        // Only clear the store's selection state, not our local highlight
         if (store.clearSelectedText) {
           store.clearSelectedText();
         }
@@ -73,33 +96,26 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
     };
   }, [streamId, currentChunkIndex, store]);
   
-  // Get the currently selected text from the store
-  const selectedText = store.chunkedMessages?.selectedText || '';
-  const activeFeedback = store.chunkedMessages?.activeFeedback || { streamId: null, chunkIndex: null };
-  
-  // Only show selected text if it belongs to this panel's stream
-  const isSelectedTextForThisStream = activeFeedback?.streamId === streamId;
-  const displaySelectedText = isSelectedTextForThisStream ? selectedText : '';
-  
-  // Safely get current feedback for this chunk (if any)
-  const getFeedbackSafely = () => {
-    if (!store.chunkedMessages?.feedback?.[streamId]) return undefined;
-    return store.chunkedMessages.feedback[streamId][currentChunkIndex];
-  };
-  
-  const currentFeedback = getFeedbackSafely();
+  // Clear the highlighted text when moving to the next chunk
+  useEffect(() => {
+    setHighlightedText('');
+  }, [currentChunkIndex]);
   
   // Initialize comment field with existing comment when chunk changes
   useEffect(() => {
-    setComment(currentFeedback?.comment || '');
-  }, [currentChunkIndex, streamId, currentFeedback?.comment]);
+    if (currentFeedback?.comment) {
+      setComment(currentFeedback.comment);
+    } else {
+      setComment('');
+    }
+  }, [currentChunkIndex, streamId, currentFeedback]);
   
   // Prepare feedback object with the currently selected text
   const prepareFeedbackWithSelection = (rating: 'positive' | 'negative' | undefined) => {
     return {
       rating,
       comment: comment.trim(),
-      selectedText: isSelectedTextForThisStream ? selectedText : currentFeedback?.selectedText || '',
+      selectedText: isSelectedTextForThisStream ? selectedText : highlightedText,
       timestamp: Date.now()
     };
   };
@@ -122,25 +138,24 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
     }
   };
   
-  // We've removed the thumbs down functionality
-  
   // Handle comment changes with auto-save functionality (mockup)
   const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newComment = e.target.value;
     setComment(newComment);
-    
-    // In a real implementation, we would debounce this autosave
-    // For the mockup, we're just updating the state
-    // No actual store integration as per requirements
   };
+
+  // Calculate position for the highlight box based on streamId
+  const highlightPosition = streamId === 'stream1' 
+    ? 'left-[25%] -translate-x-1/2' // Centered on left column
+    : 'left-[75%] -translate-x-1/2'; // Centered on right column
 
   return (
     <>
-      {/* Floating selected text indicator - positioned outside the panel */}
-      {displaySelectedText && (
-        <div className="fixed bottom-[120px] left-1/2 transform -translate-x-1/2 z-20 bg-marble-800 border border-marble-700 rounded-md px-3 py-2 shadow-lg max-w-sm">
+      {/* Floating selected text indicator - positioned above the corresponding column */}
+      {(highlightedText || (isSelectedTextForThisStream && selectedText)) && (
+        <div className={`fixed bottom-[120px] ${highlightPosition} z-20 bg-marble-800 border border-marble-700 rounded-md px-3 py-2 shadow-lg max-w-sm`}>
           <div className="text-xs text-marble-300 whitespace-nowrap overflow-hidden text-ellipsis">
-            Selected: "{displaySelectedText}"
+            Selected: "{highlightedText || (isSelectedTextForThisStream ? selectedText : '')}"
           </div>
         </div>
       )}
