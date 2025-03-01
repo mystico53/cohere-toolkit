@@ -182,13 +182,15 @@ export const Composer: React.FC<Props> = ({
     <>
       {/* Button to show composer when collapsed */}
       {showChunkedMessages && !isExpanded && (
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="w-full py-2 mb-2 bg-marble-950 text-center rounded-md hover:bg-marble-900 transition-colors text-mushroom-300"
-        >
-          <Icon name="message-square" className="mr-2" />
-          <span>Show Composer</span>
-        </button>
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="px-3 py-1 text-xs rounded-md border border-marble-700 hover:bg-marble-800 transition-colors text-mushroom-300 flex items-center"
+          >
+            <Icon name="message-square" className="mr-2" />
+            <span>Show Composer</span>
+          </button>
+        </div>
       )}
       
       <div 

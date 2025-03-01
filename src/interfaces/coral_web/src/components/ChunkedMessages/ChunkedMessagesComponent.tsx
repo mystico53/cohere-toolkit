@@ -111,6 +111,30 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
       }
     };
     
+    // Handle "No Preference" button click
+    const handleNoPreference = () => {
+      // Record neutral feedback for both streams
+      const currentIndex1 = chunkedMessages?.currentChunkIndices?.stream1 || 0;
+      const currentIndex2 = chunkedMessages?.currentChunkIndices?.stream2 || 0;
+      
+      recordFeedback('stream1', currentIndex1, { 
+        rating: 'neutral', 
+        comment: 'No preference',
+        selectedText: ''
+      });
+      
+      recordFeedback('stream2', currentIndex2, { 
+        rating: 'neutral', 
+        comment: 'No preference',
+        selectedText: ''
+      });
+      
+      clearSelectedText();
+      
+      // Move to next chunk
+      showNextChunk();
+    };
+    
     // Always render even if there are no chunks yet
     const stream1Chunks = chunkedMessages?.chunks?.stream1 || [];
     const stream2Chunks = chunkedMessages?.chunks?.stream2 || [];
@@ -182,6 +206,18 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
             </div>
           </div>
         </div>
+        
+        {/* "No Preference" button - centered between the two feedback panels */}
+        {stream1Chunks.length > 0 && currentIndices.stream1 < stream1Chunks.length - 1 && (
+          <div className="fixed bottom-[75px] left-1/2 transform -translate-x-1/2 z-20">
+            <button
+              onClick={handleNoPreference}
+              className="px-4 py-2 text-sm rounded border border-marble-700 hover:bg-marble-800 text-marble-300"
+            >
+              Skip
+            </button>
+          </div>
+        )}
         
         {/* Feedback Panels - Fixed position above content */}
         <FeedbackPanel streamId="stream1" />
