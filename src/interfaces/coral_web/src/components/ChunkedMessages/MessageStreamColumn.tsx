@@ -30,7 +30,7 @@ const MessageStreamColumn = ({
     if (chunks[i]) {
       // Only add zone label for the current chunk
       if (i === currentIndex) {
-        visibleText += `\nZone ${i + 1} of ${chunks.length}\n\n${chunks[i]}\n`;
+        visibleText += `\nEvaluation Section ${i + 1} of ${chunks.length}\n\n${chunks[i]}\n`;
       } else {
         // Previous chunks don't get any decoration
         visibleText += `${chunks[i]}\n\n`;
@@ -51,9 +51,9 @@ const MessageStreamColumn = ({
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%', justifyContent: 'flex-end' }}>
       <div className="text-sm text-marble-400 font-medium pb-2">
-        Response {streamId === 'stream1' ? '1' : '2'} (Chunk {currentIndex + 1} of {chunks.length || 1})
+        Response {streamId === 'stream1' ? '1' : '2'} 
       </div>
       
       <div 

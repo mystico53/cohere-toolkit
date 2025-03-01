@@ -154,12 +154,15 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
             height: 'calc(100% - 140px)', 
             marginTop: '60px',
             paddingBottom: '120px', 
-            scrollBehavior: 'smooth' 
+            scrollBehavior: 'smooth',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end'
           }}
         >
-          <div className="grid grid-cols-2 gap-6 mt-auto"> {/* mt-auto pushes content to bottom */}
+          <div className="grid grid-cols-2 gap-6"> {/* Removed mt-auto, using parent flex styling instead */}
             {/* Left column: Stream 1 */}
-            <div ref={stream1Ref} className="flex flex-col selectable-container">
+            <div ref={stream1Ref} className="flex flex-col h-full selectable-container">
               <MessageStreamColumn
                 streamId="stream1"
                 chunks={stream1Chunks}
@@ -169,7 +172,7 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
             </div>
             
             {/* Right column: Stream 2 */}
-            <div ref={stream2Ref} className="flex flex-col selectable-container">
+            <div ref={stream2Ref} className="flex flex-col h-full selectable-container">
               <MessageStreamColumn
                 streamId="stream2"
                 chunks={stream2Chunks}
