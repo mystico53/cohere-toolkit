@@ -152,7 +152,8 @@ const ChunkedMessagesComponent = forwardRef<HTMLDivElement, ChunkedMessagesProps
           className="flex-grow flex flex-col overflow-y-auto w-full px-4 py-6"
           style={{ 
             height: 'calc(100% - 140px)', 
-            marginTop: '60px', // Add margin to account for control panel at top
+            marginTop: '60px',
+            paddingBottom: '120px', 
             scrollBehavior: 'smooth' 
           }}
         >
