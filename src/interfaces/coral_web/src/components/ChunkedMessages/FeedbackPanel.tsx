@@ -101,8 +101,8 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
     };
   };
   
-  // Handle thumbs up click with comment and selected text
-  const handleThumbsUp = () => {
+  // Handle "I prefer this section" click (replaces thumbs up)
+  const handlePreferSection = () => {
     if (store.recordFeedback) {
       const feedback = prepareFeedbackWithSelection('positive');
       store.recordFeedback(streamId, currentChunkIndex, feedback);
@@ -119,23 +119,7 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
     }
   };
   
-  // Handle thumbs down click with comment and selected text
-  const handleThumbsDown = () => {
-    if (store.recordFeedback) {
-      const feedback = prepareFeedbackWithSelection('negative');
-      store.recordFeedback(streamId, currentChunkIndex, feedback);
-      
-      // Clear the selected text after saving
-      if (store.clearSelectedText) {
-        store.clearSelectedText();
-      }
-      
-      // Add this line to advance both streams after feedback
-      if (store.showNextChunk) {
-        store.showNextChunk();
-      }
-    }
-  };
+  // We've removed the thumbs down functionality
   
   // Handle comment changes
   const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,64 +161,40 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
         ref={panelRef}
         className={`fixed bottom-[60px] ${position} border-t border-marble-950 bg-marble-1000 px-4 py-3 z-10`}
       >
-        <div className="text-sm font-medium text-marble-400 flex justify-between items-center">
+        <div className="text-sm font-medium text-marble-400 text-center">
           <span>Feedback for Response {streamId === 'stream1' ? '1' : '2'}</span>
         </div>
-        <div className="mt-2 text-sm flex flex-col space-y-3">
-          {/* Feedback controls row */}
-          <div className="flex items-center space-x-2">
-            {/* Rating buttons */}
-            <div className="flex space-x-2">
-              <button
-                onClick={handleThumbsUp}
-                className={`p-2 rounded-full ${
-                  currentFeedback?.rating === 'positive'
-                    ? 'bg-green-700 text-white'
-                    : 'bg-marble-900 hover:bg-marble-800'
-                }`}
-                aria-label="Thumbs up"
-                title="Positive feedback"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 10v12"></path>
-                  <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"></path>
-                </svg>
-              </button>
-              <button
-                onClick={handleThumbsDown}
-                className={`p-2 rounded-full ${
-                  currentFeedback?.rating === 'negative'
-                    ? 'bg-red-700 text-white'
-                    : 'bg-marble-900 hover:bg-marble-800'
-                }`}
-                aria-label="Thumbs down"
-                title="Negative feedback"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 14V2"></path>
-                  <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z"></path>
-                </svg>
-              </button>
-            </div>
-            
-            {/* Comment input field */}
-            <div className="flex-1 flex items-center space-x-2">
-              <input
-                type="text"
-                value={comment}
-                onChange={handleCommentChange}
-                placeholder="Add a comment..."
-                className="flex-1 px-3 py-1 text-sm bg-marble-900 border border-marble-800 rounded"
-              />
-              <button
-                onClick={handleSaveComment}
-                className="px-3 py-1 text-sm bg-marble-800 hover:bg-marble-700 rounded"
-                title="Save comment and selected text"
-              >
-                Save
-              </button>
-            </div>
-          </div>
+        
+        {/* Centered "I prefer this section" button (replacing thumbs up) */}
+        <div className="mt-3 flex justify-center">
+          <button
+            onClick={handlePreferSection}
+            className={`px-4 py-2 text-sm rounded ${
+              currentFeedback?.rating === 'positive'
+                ? 'bg-green-700 text-white'
+                : 'bg-marble-800 hover:bg-marble-700 text-marble-300'
+            }`}
+          >
+            I prefer this section
+          </button>
+        </div>
+        
+        {/* Comment input field (centered and below the prefer button) */}
+        <div className="mt-3 flex flex-col items-center space-y-2">
+          <input
+            type="text"
+            value={comment}
+            onChange={handleCommentChange}
+            placeholder="Add a comment..."
+            className="w-full px-3 py-1 text-sm bg-marble-900 border border-marble-800 rounded text-center"
+          />
+          <button
+            onClick={handleSaveComment}
+            className="px-3 py-1 text-sm bg-marble-800 hover:bg-marble-700 rounded"
+            title="Save comment and selected text"
+          >
+            Save
+          </button>
         </div>
       </div>
     </>
