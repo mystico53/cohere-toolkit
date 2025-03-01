@@ -73,6 +73,9 @@ type chunkedMessagesActions = {
   // New methods for UI interaction
   getFeedbackForChunk: (streamId: 'stream1' | 'stream2', chunkIndex: number) => ChunkFeedback | undefined;
   getSelectedTextFeedback: () => { text: string; streamId: 'stream1' | 'stream2' | null; chunkIndex: number | null; };
+  
+  // New method to get decorated chunk based on current visibility
+  getDecoratedChunk: (streamId: 'stream1' | 'stream2', chunkIndex: number) => string;
 };
 
 export type chunkedMessagesStore = {
@@ -167,23 +170,17 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     set((state) => {
       const { stream1, stream2 } = state.chunkedMessages.responses;
       
-      // Simple function to chunk text into segments of exactly maxChunkSize
+      // Simple function to chunk text into segments (without decorations)
       const createTextChunks = (text: string): string[] => {
         const chunks: string[] = [];
         
         // If text is empty, return empty array
         if (!text) return chunks;
         
-        // Simply split text into chunks of maxChunkSize characters
+        // Split text into chunks of maxChunkSize characters (no decorations added here)
         for (let i = 0; i < text.length; i += maxChunkSize) {
           const chunk = text.substring(i, Math.min(i + maxChunkSize, text.length));
-          
-          // Add ellipsis if this isn't the last chunk and we're not at the end of the text
-          if (i + maxChunkSize < text.length) {
-            chunks.push(chunk);
-          } else {
-            chunks.push(chunk);
-          }
+          chunks.push(chunk);
         }
         
         return chunks;
@@ -386,6 +383,29 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
       streamId: activeFeedback.streamId,
       chunkIndex: activeFeedback.chunkIndex
     };
+  },
+  
+  // New method to get a chunk with decorations only if it's the currently visible one
+  getDecoratedChunk: (streamId, chunkIndex) => {
+    const state = get().chunkedMessages;
+    const chunks = state.chunks[streamId] || [];
+    const currentIndex = state.currentChunkIndices[streamId];
+    
+    // If the requested chunk doesn't exist, return empty string
+    if (!chunks[chunkIndex]) return '';
+    
+    // Get the raw chunk content
+    const chunk = chunks[chunkIndex];
+    
+    // Only add decorations if this is the currently visible chunk
+    if (chunkIndex === currentIndex) {
+      // Using Unicode emoji for right arrow (prefix) and left arrow (suffix)
+      const prefix = '➡️ ';
+      const suffix = ' ⬅️';
+      return prefix + chunk + suffix;
+    }
+    
+    // Otherwise return the chunk without decorations
+    return chunk;
   }
-
 });

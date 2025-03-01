@@ -22,11 +22,19 @@ const MessageStreamColumn = ({
   const { setSelectedText } = usechunkedMessagesStore();
   const messageContainerRef = useRef<HTMLDivElement>(null);
   
+  // Helper function to decorate chunks locally
+  const decorateChunk = (chunk: string, isCurrentChunk: boolean) => {
+    if (isCurrentChunk) {
+      return `➡️ ${chunk} ⬅️`;
+    }
+    return chunk;
+  };
+  
   // Combine all visible chunks into a single string
   let visibleText = '';
   for (let i = 0; i <= currentIndex; i++) {
     if (chunks[i]) {
-      visibleText += chunks[i];
+      visibleText += decorateChunk(chunks[i], i === currentIndex);
     }
   }
 
