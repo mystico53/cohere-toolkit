@@ -22,19 +22,19 @@ const MessageStreamColumn = ({
   const { setSelectedText } = usechunkedMessagesStore();
   const messageContainerRef = useRef<HTMLDivElement>(null);
   
-  // Helper function to decorate chunks locally
-  const decorateChunk = (chunk: string, isCurrentChunk: boolean) => {
-    if (isCurrentChunk) {
-      return `➡️ ${chunk} ⬅️`;
-    }
-    return chunk;
-  };
-  
   // Combine all visible chunks into a single string
   let visibleText = '';
+  
+  // Add all chunks up to and including the current one
   for (let i = 0; i <= currentIndex; i++) {
     if (chunks[i]) {
-      visibleText += decorateChunk(chunks[i], i === currentIndex);
+      // Only add zone label for the current chunk
+      if (i === currentIndex) {
+        visibleText += `\nZone ${i + 1} of ${chunks.length}\n\n${chunks[i]}\n`;
+      } else {
+        // Previous chunks don't get any decoration
+        visibleText += `${chunks[i]}\n\n`;
+      }
     }
   }
 

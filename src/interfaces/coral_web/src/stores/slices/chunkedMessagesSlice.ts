@@ -170,25 +170,104 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     set((state) => {
       const { stream1, stream2 } = state.chunkedMessages.responses;
       
-      // Simple function to chunk text into segments (without decorations)
+      // Function to chunk text at paragraph boundaries with improved format preservation
       const createTextChunks = (text: string): string[] => {
+        if (!text) return [];
+        
+        // Detect different types of paragraph separators
+        // - Standard newlines
+        // - Bullet points (• or - or * followed by space)
+        // - Numbered lists (1. 2. etc followed by space)
+        // - Headings (often preceded by multiple newlines and followed by colon)
+        const paragraphRegex = /(?:\n\s*\n|\n\s*[•\-\*]\s|\n\s*\d+\.\s|\n\s*[A-Z][^:]+:)/g;
+        
+        // Keep track of all split positions
+        const splitPositions = [];
+        let match;
+        
+        // Find all potential paragraph split positions
+        while ((match = paragraphRegex.exec(text)) !== null) {
+          // Store the position of the start of the match
+          splitPositions.push(match.index);
+        }
+        
+        // Always include start and end positions
+        splitPositions.unshift(0);
+        splitPositions.push(text.length);
+        
+        // Create paragraphs based on the split positions
+        const paragraphs = [];
+        for (let i = 0; i < splitPositions.length - 1; i++) {
+          const start = splitPositions[i];
+          const end = splitPositions[i + 1];
+          const paragraph = text.substring(start, end).trim();
+          if (paragraph) {
+            paragraphs.push(paragraph);
+          }
+        }
+        
+        // Group paragraphs into chunks while preserving format
         const chunks: string[] = [];
+        let currentChunk = '';
         
-        // If text is empty, return empty array
-        if (!text) return chunks;
+        for (const paragraph of paragraphs) {
+          // Determine separator based on paragraph content
+          let separator = '\n\n';
+          if (paragraph.match(/^[•\-\*]\s/)) separator = '\n';
+          if (paragraph.match(/^\d+\.\s/)) separator = '\n';
+          
+          const potentialChunk = currentChunk 
+            ? currentChunk + separator + paragraph 
+            : paragraph;
+          
+          // If adding this paragraph exceeds the max size and we already have content,
+          // push the current chunk and start a new one
+          if (potentialChunk.length > maxChunkSize && currentChunk) {
+            chunks.push(currentChunk);
+            currentChunk = paragraph;
+          } else {
+            // Otherwise, add this paragraph to the current chunk
+            currentChunk = potentialChunk;
+          }
+        }
         
-        // Split text into chunks of maxChunkSize characters (no decorations added here)
-        for (let i = 0; i < text.length; i += maxChunkSize) {
-          const chunk = text.substring(i, Math.min(i + maxChunkSize, text.length));
-          chunks.push(chunk);
+        // Add the final chunk if it has content
+        if (currentChunk) {
+          chunks.push(currentChunk);
         }
         
         return chunks;
       };
       
-      // Create chunks for each stream
+      // Create initial chunks for each stream
       const stream1Chunks = createTextChunks(stream1);
       const stream2Chunks = createTextChunks(stream2);
+      
+      // Determine which stream has fewer chunks
+      const minChunkCount = Math.min(stream1Chunks.length, stream2Chunks.length);
+      
+      // Function to normalize chunks to match the target count
+      const normalizeChunks = (chunks: string[], targetCount: number): string[] => {
+        // If already at or below target count, return as is
+        if (chunks.length <= targetCount) return chunks;
+        
+        const result: string[] = [];
+        
+        // Keep the first (targetCount-1) chunks as they are
+        for (let i = 0; i < targetCount - 1; i++) {
+          result.push(chunks[i]);
+        }
+        
+        // For the last chunk, combine all remaining chunks
+        const remainingChunks = chunks.slice(targetCount - 1);
+        result.push(remainingChunks.join('\n\n'));
+        
+        return result;
+      };
+      
+      // Normalize both streams to have the same number of chunks
+      const normalizedStream1Chunks = normalizeChunks(stream1Chunks, minChunkCount);
+      const normalizedStream2Chunks = normalizeChunks(stream2Chunks, minChunkCount);
       
       // Create empty feedback slots for each chunk
       const createEmptyFeedback = (count: number) => {
@@ -199,12 +278,12 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
         chunkedMessages: {
           ...state.chunkedMessages,
           chunks: {
-            stream1: stream1Chunks,
-            stream2: stream2Chunks,
+            stream1: normalizedStream1Chunks,
+            stream2: normalizedStream2Chunks,
           },
           feedback: {
-            stream1: createEmptyFeedback(stream1Chunks.length),
-            stream2: createEmptyFeedback(stream2Chunks.length),
+            stream1: createEmptyFeedback(normalizedStream1Chunks.length),
+            stream2: createEmptyFeedback(normalizedStream2Chunks.length),
           }
         }
       };
@@ -399,10 +478,9 @@ export const createchunkedMessagesSlice: StateCreator<StoreState, [], [], chunke
     
     // Only add decorations if this is the currently visible chunk
     if (chunkIndex === currentIndex) {
-      // Using Unicode emoji for right arrow (prefix) and left arrow (suffix)
-      const prefix = '➡️ ';
-      const suffix = ' ⬅️';
-      return prefix + chunk + suffix;
+      // Create a visual border using standard characters that should render in any UI
+      const border = '----------------------------------------';
+      return `${border}\nACTIVE CHUNK\n${border}\n\n${chunk}\n\n${border}\n`;
     }
     
     // Otherwise return the chunk without decorations
