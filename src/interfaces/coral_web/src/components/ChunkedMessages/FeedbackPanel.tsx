@@ -16,6 +16,10 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   const [comment, setComment] = useState('');
   const [highlightedText, setHighlightedText] = useState('');
   
+  // State to track button animation
+  const [isPreferButtonPressed, setIsPreferButtonPressed] = useState(false);
+  const [isSubmitButtonPressed, setIsSubmitButtonPressed] = useState(false);
+  
   // Access the store safely with defensive checks
   const store = usechunkedMessagesStore();
   
@@ -100,12 +104,30 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
       }
     };
     
+    // Add keyboard shortcut handler (1 for stream1, 2 for stream2)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input field
+      if (e.target instanceof HTMLInputElement || 
+          e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      // Handle number key presses for stream preferences
+      if (e.key === '1' && streamId === 'stream1') {
+        handlePreferSection();
+      } else if (e.key === '2' && streamId === 'stream2') {
+        handlePreferSection();
+      }
+    };
+    
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('click', handleDocumentClick);
+    document.addEventListener('keydown', handleKeyDown);
     
     return () => {
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [streamId, currentChunkIndex, store, totalChunks]);
   
@@ -135,6 +157,10 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   
   // Handle "I prefer this section" click (replaces thumbs up)
   const handlePreferSection = () => {
+    // Animate button press
+    setIsPreferButtonPressed(true);
+    setTimeout(() => setIsPreferButtonPressed(false), 500); // Reset after 500ms
+    
     if (store.recordFeedback) {
       const feedback = prepareFeedbackWithSelection('positive');
       store.recordFeedback(streamId, currentChunkIndex, feedback);
@@ -159,6 +185,10 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   
   // Handle form submission (used by both button click and Enter key)
   const handleSubmitFeedback = () => {
+    // Animate button press
+    setIsSubmitButtonPressed(true);
+    setTimeout(() => setIsSubmitButtonPressed(false), 500); // Reset after 500ms
+    
     if (store.recordFeedback) {
       const feedback = prepareFeedbackWithSelection(undefined);
       store.recordFeedback(streamId, currentChunkIndex, feedback);
@@ -206,15 +236,18 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
         <div className="mt-3 flex items-center justify-center space-x-3">
           <button
             onClick={handlePreferSection}
-            className={`px-4 py-2 text-sm rounded ${
-              currentFeedback?.rating === 'positive' || currentChunkIndex >= totalChunks - 1
-                ? 'bg-green-700 text-white'
-                : 'bg-marble-800 hover:bg-marble-700 text-marble-300'
+            className={`px-4 py-2 text-sm rounded transition-colors duration-200 ${
+              isPreferButtonPressed 
+                ? 'bg-[#FF8266] text-white' 
+                : currentFeedback?.rating === 'positive' || currentChunkIndex >= totalChunks - 1
+                  ? 'bg-[#FF8266] text-white'
+                  : 'bg-marble-800 hover:bg-marble-700 text-marble-300'
             }`}
+            title={`Prefer ${streamId === 'stream1' ? 'left' : 'right'} section (press ${streamId === 'stream1' ? '1' : '2'})`}
           >
             {currentChunkIndex >= totalChunks - 1
               ? "Thank you for your feedback"
-              : "I prefer this section"
+              : `I prefer this section (${streamId === 'stream1' ? '1' : '2'})`
             }
           </button>
           
@@ -232,7 +265,11 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
               />
               <button
                 onClick={handleSubmitFeedback}
-                className="px-3 py-2 text-sm bg-marble-800 hover:bg-marble-700 text-marble-300 border border-marble-800 rounded-r"
+                className={`px-3 py-2 text-sm transition-colors duration-200 ${
+                  isSubmitButtonPressed
+                    ? 'bg-[#FF8266] text-white'
+                    : 'bg-marble-800 hover:bg-marble-700 text-marble-300'
+                } border border-marble-800 rounded-r`}
               >
                 Submit
               </button>

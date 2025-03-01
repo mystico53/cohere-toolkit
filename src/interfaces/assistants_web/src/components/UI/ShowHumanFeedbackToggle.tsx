@@ -11,7 +11,7 @@ export const ShowHumanFeedbackToggle = () => {
   return (
     <section className="mb-4 flex gap-6">
       <Text styleAs="label" className="font-medium">
-        Human feedback
+        Side by Side Responses
       </Text>
       <Switch
         checked={humanFeedback}

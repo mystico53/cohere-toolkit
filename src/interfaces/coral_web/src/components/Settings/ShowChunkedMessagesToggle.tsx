@@ -9,7 +9,7 @@ export const ShowChunkedMessagesToggle = () => {
   return (
     <div className="flex items-center justify-between">
       <Text styleLevel="p">
-        Chunked messages
+        Response Sections
       </Text>
       <Switch
         checked={showChunkedMessages}

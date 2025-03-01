@@ -9,7 +9,7 @@ export const ShowHumanFeedbackToggle = () => {
   return (
     <div className="flex items-center justify-between">
       <Text styleLevel="p">{/* or use STYLE_LEVEL_TO_CLASSES.p */}
-        Human feedback
+        Side by Side Responses
       </Text>
       <Switch
         checked={humanFeedback}
