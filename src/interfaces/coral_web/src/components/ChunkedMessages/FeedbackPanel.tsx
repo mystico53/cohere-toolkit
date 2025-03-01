@@ -23,6 +23,9 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   // Safely get the current chunk index with a fallback to 0
   const currentChunkIndex = store.chunkedMessages?.currentChunkIndices?.[streamId] ?? 0;
   
+  // Get the total number of chunks for this stream
+  const totalChunks = store.chunkedMessages?.chunks?.[streamId]?.length ?? 0;
+  
   // Add text selection handling
   useEffect(() => {
     const handleMouseUp = () => {
@@ -121,28 +124,14 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
   
   // We've removed the thumbs down functionality
   
-  // Handle comment changes
+  // Handle comment changes with auto-save functionality (mockup)
   const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setComment(e.target.value);
-  };
-  
-  // Save comment and selected text (without changing rating)
-  const handleSaveComment = () => {
-    if (store.recordFeedback) {
-      // Preserve existing rating if any
-      const feedback = prepareFeedbackWithSelection(currentFeedback?.rating);
-      store.recordFeedback(streamId, currentChunkIndex, feedback);
-      
-      // Clear the selected text after saving
-      if (store.clearSelectedText) {
-        store.clearSelectedText();
-      }
-      
-      // Add this line to advance both streams after feedback
-      if (store.showNextChunk) {
-        store.showNextChunk();
-      }
-    }
+    const newComment = e.target.value;
+    setComment(newComment);
+    
+    // In a real implementation, we would debounce this autosave
+    // For the mockup, we're just updating the state
+    // No actual store integration as per requirements
   };
 
   return (
@@ -162,39 +151,45 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
         className={`fixed bottom-[60px] ${position} border-t border-marble-950 bg-marble-1000 px-4 py-3 z-10`}
       >
         <div className="text-sm font-medium text-marble-400 text-center">
-          <span>Feedback for Response {streamId === 'stream1' ? '1' : '2'}</span>
+          <span>Feedback for Section {currentChunkIndex + 1} of {totalChunks}</span>
         </div>
         
-        {/* Centered "I prefer this section" button (replacing thumbs up) */}
-        <div className="mt-3 flex justify-center">
+        {/* "I prefer this section" button and comment input on the same line */}
+        <div className="mt-3 flex items-center justify-center space-x-3">
           <button
             onClick={handlePreferSection}
             className={`px-4 py-2 text-sm rounded ${
-              currentFeedback?.rating === 'positive'
+              currentFeedback?.rating === 'positive' || currentChunkIndex >= totalChunks - 1
                 ? 'bg-green-700 text-white'
                 : 'bg-marble-800 hover:bg-marble-700 text-marble-300'
             }`}
           >
-            I prefer this section
+            {currentChunkIndex >= totalChunks - 1
+              ? "Thank you for your feedback"
+              : "I prefer this section"
+            }
           </button>
-        </div>
-        
-        {/* Comment input field (centered and below the prefer button) */}
-        <div className="mt-3 flex flex-col items-center space-y-2">
-          <input
-            type="text"
-            value={comment}
-            onChange={handleCommentChange}
-            placeholder="Add a comment..."
-            className="w-full px-3 py-1 text-sm bg-marble-900 border border-marble-800 rounded text-center"
-          />
-          <button
-            onClick={handleSaveComment}
-            className="px-3 py-1 text-sm bg-marble-800 hover:bg-marble-700 rounded"
-            title="Save comment and selected text"
-          >
-            Save
-          </button>
+          
+          {/* Only show comment field if not at the last section */}
+          {currentChunkIndex < totalChunks - 1 && (
+            <div className="relative flex-1 max-w-xs">
+              <input
+                type="text"
+                value={comment}
+                onChange={handleCommentChange}
+                placeholder="Add a comment..."
+                className="w-full px-3 py-2 text-sm bg-marble-900 border border-marble-800 rounded"
+              />
+              {/* Green checkmark that appears when comment is not empty */}
+              {comment.trim() !== '' && (
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-green-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
