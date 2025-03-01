@@ -172,22 +172,29 @@ const FeedbackPanel = ({ streamId }: FeedbackPanelProps) => {
           
           {/* Only show comment field if not at the last section */}
           {currentChunkIndex < totalChunks - 1 && (
-            <div className="relative flex-1 max-w-xs">
+            <div className="relative flex-1 max-w-xs flex">
               <input
                 type="text"
                 value={comment}
                 onChange={handleCommentChange}
                 placeholder="Add a comment..."
-                className="w-full px-3 py-2 text-sm bg-marble-900 border border-marble-800 rounded"
+                className="w-full px-3 py-2 text-sm bg-marble-900 border border-marble-800 rounded-l"
               />
-              {/* Green checkmark that appears when comment is not empty */}
-              {comment.trim() !== '' && (
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-green-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 6L9 17l-5-5"/>
-                  </svg>
-                </div>
-              )}
+              <button
+                onClick={() => {
+                  if (store.recordFeedback) {
+                    const feedback = prepareFeedbackWithSelection(undefined);
+                    store.recordFeedback(streamId, currentChunkIndex, feedback);
+                    
+                    if (store.showNextChunk) {
+                      store.showNextChunk();
+                    }
+                  }
+                }}
+                className="px-3 py-2 text-sm bg-marble-800 hover:bg-marble-700 text-marble-300 border border-marble-800 rounded-r"
+              >
+                Submit
+              </button>
             </div>
           )}
         </div>
