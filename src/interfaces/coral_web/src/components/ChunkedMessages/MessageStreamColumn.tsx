@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef } from 'react';
 import MessageRow from '@/components/MessageRow';
 import { BotState, MessageType } from '@/types/message';
 import { cn } from '@/utils';
@@ -21,7 +21,6 @@ const MessageStreamColumn = ({
 }: MessageStreamColumnProps) => {
   const { setSelectedText } = usechunkedMessagesStore();
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const [highlightHeight, setHighlightHeight] = useState(0);
   
   // Combine all visible chunks into a single string
   let visibleText = '';
@@ -42,23 +41,6 @@ const MessageStreamColumn = ({
       setSelectedText(text, streamId, currentIndex);
     }
   };
-
-  // Calculate the previous chunks' character count for approximate height estimation
-  const prevChunksLength = chunks
-    .slice(0, currentIndex)
-    .reduce((acc, chunk) => acc + chunk.length, 0);
-  
-  const totalCharsCount = visibleText.length;
-  
-  // After the component renders, calculate the height for the highlight overlay
-  useEffect(() => {
-    if (messageContainerRef.current && prevChunksLength > 0) {
-      const containerHeight = messageContainerRef.current.scrollHeight;
-      const ratio = prevChunksLength / totalCharsCount;
-      // Estimate the height of previous chunks based on their proportion of total text
-      setHighlightHeight(containerHeight * ratio);
-    }
-  }, [prevChunksLength, totalCharsCount, visibleText]);
 
   return (
     <div className="flex flex-col">
@@ -81,18 +63,6 @@ const MessageStreamColumn = ({
           }}
           onRetry={() => {}}
         />
-        
-        {/* Highlight overlay for previous chunks */}
-        {prevChunksLength > 0 && (
-          <div 
-            className="absolute top-0 left-0 w-full pointer-events-none"
-            style={{
-              height: `${highlightHeight}px`,
-              backgroundColor: 'rgba(255, 0, 0, 0.15)',
-              backdropFilter: 'brightness(90%)'
-            }}
-          />
-        )}
       </div>
     </div>
   );
