@@ -722,12 +722,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
           // Update conversation
           setConversation({ messages: [...newMessages, finalMessage] });
           
-          // Reapply the update after a delay to handle any state resets
-          setTimeout(() => {
-
-            setConversation({ messages: [...newMessages, finalMessage] });
-          }, 100);
-          
           // Clear streaming state
           setStreamingMessage1(null);
           setStreamingMessage2(null);
