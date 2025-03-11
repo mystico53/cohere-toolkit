@@ -63,6 +63,10 @@ type ChatRequestOverrides = Pick<
   'temperature' | 'model' | 'preamble' | 'tools' | 'file_ids'
 >;
 
+interface ExtendedChatRequest extends CohereChatRequest {
+  humanFeedback?: boolean;
+}
+
 export type HandleSendChat = (
   {
     currentMessages,
@@ -522,10 +526,6 @@ export const useChat = (config?: { onSend?: (msg: string) => void }) => {
     });
   };
   
-  interface ExtendedChatRequest extends CohereChatRequest {
-    humanFeedback?: boolean;
-  }
-
   // Update the function signatures to use the extended type
   const getChatRequest = (message: string, overrides?: ChatRequestOverrides): ExtendedChatRequest => {
     const { tools: overrideTools, ...restOverrides } = overrides ?? {};

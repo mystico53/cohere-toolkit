@@ -225,8 +225,6 @@ async def chat_human_feedback(
     """
     Streaming endpoint for chat with human feedback
     """
-    import uuid
-    import logging
 
     logger = logging.getLogger(__name__)
     logger.info(f"Starting human feedback chat with stream_id: {stream_id}")
